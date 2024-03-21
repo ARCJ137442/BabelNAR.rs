@@ -6,3 +6,34 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[dependencies.nar_dev_utils]
+# 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`
+# version = "0.1.0" # ! 本地依赖可以不添加版本
+# *🚩【2024-03-21 09:26:38】启用所有
+path = "../NAR-dev-util"
+features = []
+
+[dependencies.narsese]
+# ! 本地依赖可以不添加版本
+# 载入Narsese API，引入其中所有部分
+path = "../Narsese.rs"
+features = ["bundled"]
+
+[dependencies.navm]
+# ! 本地依赖可以不添加版本
+# 载入NAVM API，引入「非公理虚拟机」模型
+path = "../NAVM.rs"
+features = [] # ! 【2024-03-21 09:24:51】暂时没有特性
+
+# 定义库的特性
+[features]
+# 默认启用的特性
+default = []
+# 大杂烩
+bundled = [
+    "implements"
+]
+# 各个独立的特性 #
+# 具体接口实现：OpenNARS、ONA、NARS-Python、OpenJunars、PyNARS……
+implements = []

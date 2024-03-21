@@ -1,6 +1,8 @@
 {
     "recommendations": [
         "swellaby.vscode-rust-test-adapter",
-        "nyxiative.rust-and-friends"
+        "nyxiative.rust-and-friends",
+        "itsyaasir.rust-feature-toggler",
+        "rust-lang.rust-analyzer"
     ]
 }

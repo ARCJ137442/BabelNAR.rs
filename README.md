@@ -4,10 +4,11 @@
 
 该项目使用[语义化版本 2.0.0](https://semver.org/)进行版本号管理。
 
-基于[**NAVM.rs**](https://github.com/ARCJ137442/NAVM.rs)的CIN（NARS计算机实现）接口
+[**NAVM.rs**](https://github.com/ARCJ137442/NAVM.rs)的**运行时**
 
 - 前身为[**BabelNAR.jl**](https://github.com/ARCJ137442/BabelNAR.jl)
-- 旨在方便连接各类CIN，并通过**Websocket**等服务提供**通用统一交互接口**。
+- 🎯为「非公理虚拟机模型」提供程序实现
+- 🎯为各CIN实现**统一输入输出**形式
 
 ## 概念
 

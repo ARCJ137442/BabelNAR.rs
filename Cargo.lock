@@ -5,3 +5,34 @@ version = 3
 [[package]]
 name = "babel_nar"
 version = "0.1.0"
+dependencies = [
+ "nar_dev_utils",
+ "narsese",
+ "navm",
+]
+
+[[package]]
+name = "lazy_static"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+
+[[package]]
+name = "nar_dev_utils"
+version = "0.12.0"
+
+[[package]]
+name = "narsese"
+version = "0.5.0"
+dependencies = [
+ "lazy_static",
+ "nar_dev_utils",
+]
+
+[[package]]
+name = "navm"
+version = "0.1.0"
+dependencies = [
+ "nar_dev_utils",
+ "narsese",
+]
