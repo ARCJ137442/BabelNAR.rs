@@ -1,13 +1,16 @@
 //! 封装一个简单的「交互式输入输出」
 
-use std::ffi::OsStr;
-use std::io::{BufRead, BufReader, Result as IoResult, Write};
-use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::Mutex;
-use std::thread::{self, JoinHandle};
-
-use util::ResultTransform;
+use std::{
+    ffi::OsStr,
+    io::{BufRead, BufReader, Result as IoResult, Write},
+    process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio},
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Mutex,
+    },
+    thread::{self, JoinHandle},
+};
+use util::*;
 
 /// 统一定义「输出侦听器」的类型
 type OutputListener = dyn FnMut(String) + Send + Sync;
@@ -16,8 +19,7 @@ type OutputListener = dyn FnMut(String) + Send + Sync;
 /// * 📌只是作为一个「构建器」存在
 ///   * 作为真正的`IoProcessManager`的launcher/builder
 ///
-/// ! 因为有「系统指令」与「函数闭包」无法派生任何常规宏
-#[derive()]
+/// ! 因为有「系统指令」与「函数闭包」，无法派生任何常规宏
 pub struct IoProcess {
     /// 内部封装的「进程指令」对象
     command: Command,
