@@ -18,9 +18,6 @@ type OutputListener = dyn FnMut(String) + Send + Sync;
 /// 简化定义`Arc< Mutex<T>>`
 type ArcMutex<T> = Arc<Mutex<T>>;
 
-/// 简化定义`Result<T, String>`
-type ResultS<T> = Result<T, String>;
-
 /// 构建一个「IO进程」
 /// * 📌只是作为一个「构建器」存在
 ///   * 作为真正的`IoProcessManager`的launcher/builder
@@ -405,7 +402,7 @@ impl IoProcessManager {
 
 /// 单元测试
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
 
     use super::*;
     use std::{
@@ -414,12 +411,18 @@ mod tests {
     };
 
     // 定义一系列路径
-    #[allow(unused)]
     const EXE_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
-    #[allow(unused)]
-    const EXE_PATH_REPL: &str = r"..\..\..\Julia\语言学小工Ju\繁简转换\dist\repl_简化.exe";
-    #[allow(unused)]
-    const EXE_PATH_ECHO: &str = r"..\NAVM.rs\target\debug\examples\echo_exe.exe";
+
+    /// 测试工具/等待子进程输出，直到输出满足条件
+    pub fn await_fetch_until(process: &mut IoProcessManager, criterion: impl Fn(String) -> bool) {
+        loop {
+            let o = dbg!(process.fetch_output().expect("无法拉取输出"));
+            println!("fetch到其中一个输入: {o:?}");
+            if criterion(o) {
+                break;
+            }
+        }
+    }
 
     /// 实用测试工具：启动一个ONA，并附带「输出缓存」
     fn launch_ona() -> (IoProcessManager, ArcMutex<Vec<String>>) {
@@ -483,16 +486,6 @@ mod tests {
                 .expect("没有指定的输出！");
             println!("检验「{s:?}」成功！所在之处：{line:?}");
         };
-        /// 等待子进程输出，直到输出满足条件
-        fn await_fetch_until(process: &mut IoProcessManager, criterion: impl Fn(String) -> bool) {
-            loop {
-                let o = dbg!(process.fetch_output().expect("无法拉取输出"));
-                println!("fetch到其中一个输入: {o:?}");
-                if criterion(o) {
-                    break;
-                }
-            }
-        }
 
         // 先置入输入
         let input = "<A --> B>.";

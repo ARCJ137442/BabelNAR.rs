@@ -2,6 +2,7 @@
 
 use super::{InputTranslator, OutputTranslator};
 use crate::process_io::IoProcess;
+use navm::{cmd::Cmd, output::Output};
 use std::ffi::OsStr;
 
 /// 命令行虚拟机（构建者）
@@ -29,5 +30,24 @@ impl CommandVm {
             input_translator: None,
             output_translator: None,
         }
+    }
+
+    /// 配置/输入转换器
+    /// * 💭何时Rust能给特征起别名。。
+    pub fn input_translator(
+        mut self,
+        translator: impl Fn(Cmd) -> Result<String, String> + Send + Sync + 'static,
+    ) -> Self {
+        self.input_translator = Some(Box::new(translator));
+        self
+    }
+
+    /// 配置/输出转换器
+    pub fn output_translator(
+        mut self,
+        translator: impl Fn(String) -> Result<Output, String> + Send + Sync + 'static,
+    ) -> Self {
+        self.output_translator = Some(Box::new(translator));
+        self
     }
 }

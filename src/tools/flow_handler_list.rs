@@ -166,7 +166,7 @@ mod tests {
     /// 联动「NAVM输出」测试
     #[test]
     fn test_navm_output() {
-        use narsese::lexical::shortcut::*;
+        use narsese::conversion::string::impl_lexical::shortcuts::*;
         use navm::output::*;
         // 构造输出
         let answer = Output::ANSWER {

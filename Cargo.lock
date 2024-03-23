@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "babel_nar"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "nar_dev_utils",
  "narsese",
@@ -19,11 +19,11 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "nar_dev_utils"
-version = "0.15.0"
+version = "0.16.0"
 
 [[package]]
 name = "narsese"
-version = "0.7.2"
+version = "0.9.0"
 dependencies = [
  "lazy_static",
  "nar_dev_utils",
@@ -31,7 +31,7 @@ dependencies = [
 
 [[package]]
 name = "navm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nar_dev_utils",
  "narsese",
