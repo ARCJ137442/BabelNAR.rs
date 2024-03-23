@@ -12,18 +12,24 @@ edition = "2021"
 # version = "0.1.0" # ! 本地依赖可以不添加版本
 # *🚩【2024-03-21 09:26:38】启用所有
 path = "../NAR-dev-util"
+# git = "https://github.com/ARCJ137442/NAR-dev-util"
+# ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
 features = []
 
 [dependencies.narsese]
 # ! 本地依赖可以不添加版本
 # 载入Narsese API，引入其中所有部分
 path = "../Narsese.rs"
+# git = "https://github.com/ARCJ137442/Narsese.rs"
+# ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
 features = ["bundled"]
 
 [dependencies.navm]
 # ! 本地依赖可以不添加版本
 # 载入NAVM API，引入「非公理虚拟机」模型
 path = "../NAVM.rs"
+# git = "https://github.com/ARCJ137442/NAVM.rs"
+# ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
 features = [] # ! 【2024-03-21 09:24:51】暂时没有特性
 
 # 定义库的特性

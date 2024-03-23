@@ -34,24 +34,7 @@ impl VmRuntime for CommandVmRuntime {
         todo!()
     }
 
-    fn store_output(&mut self, output: Output) {
-        todo!()
-    }
-
     fn fetch_output(&mut self) -> Option<Output> {
-        todo!()
-    }
-
-    fn add_output_listener<Listener>(&mut self, listener: Listener)
-    where
-        Listener: FnMut(Output) -> Option<Output>,
-    {
-        todo!()
-    }
-
-    fn iter_output_listeners<'a>(
-        &'a self,
-    ) -> Box<dyn Iterator<Item = &'a mut dyn FnMut(Output) -> Option<Output>> + 'a> {
         todo!()
     }
 }
@@ -63,9 +46,9 @@ impl VmBuilder<CommandVmRuntime> for CommandVm {
             process: self.io_process.launch(),
             // 输入转译器
             input_translator: self
-            .input_translator
-            // 默认值：直接调用Cmd的`to_string`方法 | 使用NAVM Cmd语法
-            .unwrap_or(Box::new(|cmd| cmd.to_string())),
+                .input_translator
+                // 默认值：直接调用Cmd的`to_string`方法 | 使用NAVM Cmd语法
+                .unwrap_or(Box::new(|cmd| cmd.to_string())),
             // 输出转译器
             output_translator: self
                 .output_translator
