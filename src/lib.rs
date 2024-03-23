@@ -11,6 +11,8 @@ pub extern crate nar_dev_utils as util;
 pub mod process_io;
 // 运行时
 pub mod runtime;
+// （可选的实用）工具
+pub mod tools;
 
 // 可选模块 //
 util::feature_pub_mod_and_reexport! {
