@@ -22,10 +22,20 @@ pub struct CommandVm {
 
 impl CommandVm {
     /// 构造函数
+    /// * 🚩接收一个可执行文件路径
+    ///   * 📌直接生成[`IoProcess`]对象，无需额外配置
     pub fn new(program_path: impl AsRef<OsStr>) -> Self {
+        let io_process = IoProcess::new(program_path);
+        Self::from_io_process(io_process)
+    }
+
+    /// 构造函数/自[`IoProcess`]对象
+    /// * 🚩从[`IoProcess`]对象创建
+    ///   * ✅这里的[`IoProcess`]必定是未被启动的：Launch之后会变成其它类型
+    pub fn from_io_process(io_process: IoProcess) -> Self {
         Self {
             // 指令
-            io_process: IoProcess::new(program_path),
+            io_process,
             // 其它暂时置空
             input_translator: None,
             output_translator: None,
@@ -49,5 +59,16 @@ impl CommandVm {
     ) -> Self {
         self.output_translator = Some(Box::new(translator));
         self
+    }
+}
+
+/// 实现/从[`IoProcess`]对象转换为[`CommandVm`]对象
+impl From<IoProcess> for CommandVm {
+    fn from(io_process: IoProcess) -> Self {
+        Self {
+            io_process,
+            input_translator: None,
+            output_translator: None,
+        }
     }
 }

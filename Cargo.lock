@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "babel_nar"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "nar_dev_utils",
  "narsese",
@@ -31,7 +31,7 @@ dependencies = [
 
 [[package]]
 name = "navm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "nar_dev_utils",
  "narsese",

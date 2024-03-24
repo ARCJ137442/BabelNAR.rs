@@ -32,9 +32,20 @@ pub struct IoProcess {
 
 impl IoProcess {
     /// 构造函数
+    /// * 🚩从路径构造实体
+    ///   * 📌直接生成[`Command`]对象，无需额外配置
     pub fn new(program_path: impl AsRef<OsStr>) -> Self {
+        // 实际上是构建了一个新[`Command`]对象
+        let command = Command::new(program_path);
+        Self::from_command(command)
+    }
+
+    /// 构造函数/自[`Command`]对象
+    /// * 🚩从[`Command`]对象构建实体
+    ///   * ✅这里的[`Command`]必定是未被启动的：Launch之后会变成[`Child`]类型
+    pub fn from_command(command: Command) -> Self {
         Self {
-            command: Command::new(program_path),
+            command,
             out_listener: None,
         }
     }
@@ -80,7 +91,6 @@ impl IoProcess {
         let child =
             // 指令+参数
             self.command
-                .arg("shell")
                 // 输入输出
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -93,6 +103,16 @@ impl IoProcess {
 
         // 创建「子进程管理器」对象
         Ok(IoProcessManager::new(child, out_listener))
+    }
+}
+
+/// 实现/从[`Command`]对象转换为[`IoProcess`]
+impl From<Command> for IoProcess {
+    /// 构造函数
+    /// * 🚩从`Command`对象构造实体
+    ///   * 📌直接生成[`Command`]对象，无需额外配置
+    fn from(command: Command) -> Self {
+        Self::from_command(command)
     }
 }
 
@@ -252,14 +272,16 @@ impl IoProcessManager {
             // 持续循环
             loop {
                 // 从子进程「标准输出」读取输入
-                // * 📌此处非阻塞（会读到空），且`buf`会有换行符
+                // * ⚠️会阻塞：`read_line`
+                // * 📄在ONA处不阻塞，但在OpenNARS时阻塞
+                // * 🔗<https://rustwiki.org/zh-CN/std/io/trait.BufRead.html#method.read_line>
                 match stdout_reader.read_line(&mut buf) {
                     // 没有任何输入⇒检查终止信号
                     // * 📌不能在这里中断，需要检查终止信号
                     // * 🚩【2024-03-24 01:48:19】目前**允许**在进程终止时获取其输出
                     //   * 一般侦听器都能侦听到
                     Ok(0) => {
-                        if dbg!(*termination_signal.lock().expect("无法锁定终止信号")) {
+                        if *termination_signal.lock().expect("无法锁定终止信号") {
                             // println!("子进程收到终止信号");
                             break;
                         }
@@ -387,8 +409,12 @@ impl IoProcessManager {
         self.put("\n").unwrap();
 
         // 等待子线程终止 //
-        self.thread_write_in.join().transform_err_debug()?;
-        self.thread_read_out.join().transform_err_debug()?;
+        // * 🚩【2024-03-24 18:49:31】现在强制销毁持有的两个子线程，不再等待其结束
+        //   * 📌主要原因：在测试OpenNARS时，发现`thread_read_out`仍然会阻塞（无法等待）
+        //   * 📌并且一时难以修复：难点在`BufReader.read_line`如何非阻塞/可终止化
+        // ! ℹ️信息 from Claude3：无法简单以此终止子线程
+        self.thread_write_in.join().transform_err_debug()?; // * ✅目前这个是可以终止的
+        drop(self.thread_read_out);
 
         // * 📝此时子线程连同「子进程的标准输入输出」一同关闭，
         //   * 子进程自身可以做输出
@@ -416,9 +442,9 @@ pub(crate) mod tests {
     /// 测试工具/等待子进程输出，直到输出满足条件
     pub fn await_fetch_until(process: &mut IoProcessManager, criterion: impl Fn(String) -> bool) {
         loop {
-            let o = dbg!(process.fetch_output().expect("无法拉取输出"));
-            println!("fetch到其中一个输入: {o:?}");
-            if criterion(o) {
+            let out = process.fetch_output().expect("无法拉取输出");
+            println!("fetch到其中一个输出: {out:?}");
+            if criterion(out) {
                 break;
             }
         }

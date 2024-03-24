@@ -1,4 +1,8 @@
 {
     "rust-analyzer.cargo.features": "all",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "cSpell.words": [
+        "runpy",
+        "traceback"
+    ]
 }
