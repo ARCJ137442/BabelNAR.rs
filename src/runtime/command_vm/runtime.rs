@@ -85,22 +85,20 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
 /// 单元测试
 #[cfg(test)]
 pub(crate) mod test {
-    use std::process::Command;
-
     use super::*;
     use narsese::conversion::string::impl_lexical::shortcuts::*;
+    use std::process::Command;
     use util::first;
 
     // 定义一系列路径
     #[allow(dead_code)]
-    const EXE_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
+    pub const EXE_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
     #[allow(dead_code)]
-    const EXE_PATH_PYNARS: &str = r"..\..\NARS-executables\launch-pynars-console-plus.cmd";
-    #[allow(dead_code)]
+    pub const EXE_PATH_PYNARS: &str = r"..\..\NARS-executables\launch-pynars-console-plus.cmd";
+    pub const JAR_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
+
     const COMMAND_JAVA: &str = "java";
     const COMMAND_ARGS_JAVA: [&str; 2] = ["-Xmx1024m", "-jar"];
-    #[allow(dead_code)]
-    const JAR_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
 
     /// 实用测试工具/等待
     pub fn await_fetch_until(
@@ -209,14 +207,17 @@ pub(crate) mod test {
         }
 
         // 构造并启动虚拟机
-        let mut vm = CommandVm::from_io_process(command_java.into())
-            // 输入转换器
+        let vm = CommandVm::from_io_process(command_java.into())
+            // 输入转译器
             .input_translator(input_translate)
-            // 输出转换器
+            // 输出转译器
             .output_translator(output_translate)
             // 🔥启动
             .launch();
+        _test_opennars(vm);
+    }
 
+    pub fn _test_opennars(mut vm: CommandVmRuntime) {
         // 专有闭包 | ⚠️无法再提取出另一个闭包：重复借用问题
         let mut input_cmd_and_await =
             |cmd, contains| input_cmd_and_await_contains(&mut vm, cmd, contains);
@@ -240,12 +241,16 @@ pub(crate) mod test {
     /// * 🚩通过预置的批处理文件启动
     #[test]
     fn test_pynars() {
-        let mut vm = CommandVm::new(EXE_PATH_PYNARS)
-            // 输入转换器：直接取其尾部
+        let vm = CommandVm::new(EXE_PATH_PYNARS)
+            // 输入转译器：直接取其尾部
             .input_translator(|cmd| Ok(cmd.tail()))
             // 🔥启动
             .launch();
+        // 可复用的测试逻辑
+        _test_pynars(vm);
+    }
 
+    pub fn _test_pynars(mut vm: CommandVmRuntime) {
         // // 睡眠等待
         // // std::thread::sleep(std::time::Duration::from_secs(1));
         // ! ↑现在无需睡眠等待：输入会自动在初始化后写入子进程
