@@ -3,7 +3,9 @@
     "editor.formatOnSave": true,
     "cSpell.words": [
         "Errno",
+        "rfind",
         "runpy",
-        "traceback"
+        "traceback",
+        "tstate"
     ]
 }

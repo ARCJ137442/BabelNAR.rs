@@ -4,12 +4,27 @@
 //! * 📌基于命令行输入输出的字符串读写
 //! * ✨NAVM指令→字符串
 //! * ✨字符串→NAVM输出
+//!
+//! ## 输出样例
+//!
+//! * `IN: <A --> B>. %1.00;0.90% {-1 : (-7995324758518856376,0)}`
+//! * `OUT: <A --> B>. %1.00;0.90% {-1 : (-7995324758518856376,0)}`
+//! * `Answer: <A --> C>. %1.00;0.81% {1584885193 : (-7995324758518856376,0);(-7995324758518856376,1)}`
+//! * `EXE: $1.00;0.99;1.00$ ^left([{SELF}])=null`
+//! * `ANTICIPATE: <{SELF} --> [SAFE]>`
+//! * `CONFIRM: <{SELF} --> [SAFE]><{SELF} --> [SAFE]>`
+//! * `DISAPPOINT: <{SELF} --> [SAFE]>`
+//! * `Executed based on: $0.2904;0.1184;0.7653$ <(&/,<{SELF} --> [right_blocked]>,+7,(^left,{SELF}),+55) =/> <{SELF} --> [SAFE]>>. %1.00;0.53%`
 
+use narsese::{
+    conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, structs::ParseResult},
+    lexical::Narsese,
+};
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
-use util::ResultS;
+use util::{ResultBoost, ResultS};
 
 /// OpenNARS的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「OpenNARS Shell输入」
@@ -33,37 +48,95 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
 /// OpenNARS的「输出转译」函数
 /// * 🎯用于将OpenNARS Shell的输出（字符串）转译为「NAVM输出」
 /// * 🚩直接根据选取的「头部」进行匹配
-pub fn output_translate(content: String) -> ResultS<Output> {
+pub fn output_translate(content_raw: String) -> ResultS<Output> {
     // 根据冒号分隔一次，然后得到「头部」
-    let head = content.split_once(':').unwrap_or(("", "")).0.to_lowercase();
+    let (head, tail) = content_raw.split_once(':').unwrap_or(("", &content_raw));
     // 根据「头部」生成输出
-    let output = match &*head {
-        "answer" => Output::ANSWER {
-            content_raw: content,
-            // TODO: 有待捕获转译
-            narsese: None,
+    let output = match &*head.to_uppercase() {
+        "IN" => Output::IN {
+            content: content_raw,
         },
-        "out" => Output::OUT {
-            content_raw: content,
-            // TODO: 有待捕获转译
-            narsese: None,
+        "OUT" => {
+            // 返回
+            Output::OUT {
+                // 先提取其中的Narsese | ⚠️借用了`content_raw`
+                narsese: strip_parse_narsese(tail)
+                    .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
+                // 然后传入整个内容
+                content_raw,
+            }
+        }
+        "ANSWER" => Output::ANSWER {
+            // 先提取其中的Narsese | ⚠️借用了`content_raw`
+            narsese: strip_parse_narsese(tail)
+                .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
+            // 然后传入整个内容
+            content_raw,
         },
-        "in" => Output::IN { content },
-        "anticipate" => Output::ANTICIPATE {
-            content_raw: content,
-            // TODO: 有待捕获转译
-            narsese: None,
+        "EXE" => Output::EXE {
+            operation: parse_operation_opennars(&content_raw),
+            content_raw,
         },
-        "exe" => Output::EXE {
-            content_raw: content,
-            // TODO: 有待捕获转译
-            operation: Operation::new("UNKNOWN", [].into_iter()),
+        "ANTICIPATE" => Output::ANTICIPATE {
+            // 先提取其中的Narsese | ⚠️借用了`content_raw`
+            narsese: strip_parse_narsese(tail)
+                .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
+            // 然后传入整个内容
+            content_raw,
         },
-        "err" | "error" => Output::ERROR {
-            description: content,
+        "ERR" | "ERROR" => Output::ERROR {
+            description: content_raw,
         },
-        _ => Output::OTHER { content },
+        // * 🚩利用OpenNARS常见输出「全大写」的特征，兼容「confirm」与「disappoint」
+        upper if head == upper => Output::UNCLASSIFIED {
+            r#type: head.to_string(),
+            content: content_raw,
+        },
+        // 其它
+        _ => Output::OTHER {
+            content: content_raw,
+        },
     };
     // 返回
     Ok(output)
+}
+
+/// 在OpenNARS输出中解析出「NARS操作」
+///
+/// TODO: 结合正则表达式进行解析
+pub fn parse_operation_opennars(content_raw: &str) -> Operation {
+    // use regex::Regex;
+    Operation {
+        // TODO: 有待捕获转译
+        head: "UNKNOWN".into(),
+        params: vec![content_raw.into()],
+    }
+}
+
+/// 切分尾部字符串，并（尝试）从中解析出Narsese
+fn strip_parse_narsese(tail: &str) -> ResultS<Narsese> {
+    // 提取并解析Narsese字符串
+    let narsese = tail
+        // 去尾
+        .rfind('{')
+        // 截取 & 解析
+        .map(|right_index| parse_narsese_opennars(&tail[..right_index]));
+    // 提取解析结果
+    match narsese {
+        // 解析成功⇒提取 & 返回
+        Some(Ok(narsese)) => Ok(narsese),
+        // 解析失败⇒打印错误日志 | 返回None
+        Some(Err(err)) => Err(format!("输出「OUT」解析失败：{err}")),
+        // 未找到括号的情况
+        None => Err("输出「OUT」解析失败：未找到「{」".into()),
+    }
+}
+
+/// 以OpenNARS的语法解析出Narsese
+/// * 🚩【2024-03-25 21:08:34】目前是直接调用ASCII解析器
+///
+/// TODO: 兼容OpenNARS特有之语法
+/// * 📌重点在其简写的「操作」语法`(^left, {SELF}, x)` => `<(*, {SELF}, x) --> ^left>`
+fn parse_narsese_opennars(input: &str) -> ParseResult {
+    FORMAT_ASCII.parse(input)
 }

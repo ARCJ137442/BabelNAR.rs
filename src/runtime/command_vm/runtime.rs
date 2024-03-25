@@ -118,7 +118,7 @@ pub(crate) mod test {
             // 展示输出
             match &output {
                 // 特别显示「回答」
-                Output::ANSWER { content_raw, .. } => println!("捕获到回答！内容：{content_raw}"),
+                Output::ANSWER { .. } => println!("捕获到回答！内容：{output:?}"),
                 _ => println!("捕获到其它输出！内容：{output:?}"),
             }
             // 包含⇒结束

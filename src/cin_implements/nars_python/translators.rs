@@ -3,21 +3,30 @@
 //! * 📌基于命令行输入输出的字符串读写
 //! * ✨NAVM指令→字符串
 //! * ✨字符串→NAVM输出
+//!
+//! ## 输出样例
+//!
+//! * `EXE: ^left based on desirability: 0.9`
+//! * `PROCESSED GOAL: SentenceID:2081:ID ({SELF} --> [SAFE])! :|: %1.00;0.03%from SentenceID:2079:ID ({SELF} --> [SAFE])! :|: %1.00;0.00%,SentenceID:2080:ID ({SELF} --> [SAFE])! :|: %1.00;0.02%,`
+//! * `PREMISE IS TRUE: ((*,{SELF}) --> ^right)`
+//! * `PREMISE IS SIMPLIFIED ({SELF} --> [SAFE]) FROM (&|,({SELF} --> [SAFE]),((*,{SELF}) --> ^right))`
 
+use narsese::lexical::Narsese;
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
 use util::ResultS;
 
+use super::format_in_nars_python;
+
 /// NARS-Python的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「NARS-Python输入」
-///
-/// TODO: ⚠️其有一种不同的语法，需要细致解析
 pub fn input_translate(cmd: Cmd) -> ResultS<String> {
     let content = match cmd {
-        // 直接使用「末尾」，此时将自动格式化任务（可兼容「空预算」的形式）
-        Cmd::NSE(..) => cmd.tail(),
+        // 使用「末尾」将自动格式化任务（可兼容「空预算」的形式）
+        // * ✅【2024-03-26 01:44:49】目前采用特定的「方言格式」解决格式化问题
+        Cmd::NSE(narsese) => format_in_nars_python(&Narsese::Task(narsese)),
         // CYC指令：运行指定周期数
         // ! NARS-Python Shell同样是自动步进的
         Cmd::CYC(n) => n.to_string(),

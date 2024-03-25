@@ -24,14 +24,14 @@
 
 ## 各CIN对接情况
 
-🕒最后更新时间：【2024-03-25 14:10:36】
+🕒最后更新时间：【2024-03-26 01:43:28】
 
 | CIN         |    实现方法     | 进程安全 | 输入转译 | 输出转译 |
 | :---------- | :---------: | :--: | :--: | :--: |
 | OpenNARS    | `java -jar` |  ✅   |  ✅   |  🚧  |
 | ONA         |   直接启动exe   |  ✅   |  ✅   |  🚧  |
 | PyNARS      | `python -m` |  ✅   |  🚧  |  🚧  |
-| NARS-Python |   直接启动exe   |  ❓   |  🚧  |  🚧  |
+| NARS-Python |   直接启动exe   |  ❓   |  ✅  |  ❌  |
 | OpenJunars  |   `julia`   |  ✅   |  ❌   |  ❌   |
 
 注：
@@ -39,6 +39,7 @@
 - 🚧输入输出转译功能仍然在从[BabelNAR_Implements](https://github.com/ARCJ137442/BabelNAR_Implements.jl)迁移
 - ❓NARS-Python的exe界面可能会在终止后延时关闭
 - ❌基于`julia`启动OpenJunars脚本`launch.jl`时，对「输出捕获」尚未有成功记录
+- ❌目前对NARS-Python的「输出捕获」尚未有成功记录
 
 ## 参考
 

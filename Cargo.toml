@@ -1,11 +1,19 @@
 [package]
 name = "babel_nar"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+regex = "1.10.4"
+
+# 用于实现「静态含闭包常量」
+# * 🎯初次引入：NARS-Python 方言格式
+# * 🔗：https://stackoverflow.com/questions/73260997/rust-boxed-closure-in-global-variable
+[dependencies.lazy_static]
+version = "1.4.0"
+optional = true
 
 [dependencies.nar_dev_utils]
 # 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`
@@ -38,7 +46,8 @@ features = [] # ! 【2024-03-21 09:24:51】暂时没有特性
 default = []
 # 大杂烩
 bundled = [
-    "cin_implements"
+    "cin_implements",
+    "lazy_static" # 这个「词法Narsese」也在用
 ]
 # 各个独立的特性 #
 # 具体接口实现：
