@@ -4,11 +4,11 @@
 
 该项目使用[语义化版本 2.0.0](https://semver.org/)进行版本号管理。
 
-[**NAVM.rs**](https://github.com/ARCJ137442/NAVM.rs)的**运行时**
+[**NAVM.rs**](https://github.com/ARCJ137442/NAVM.rs)的**运行时**及[CIN](#cin-computer-implement-of-nars)启动器
 
 - 前身为[**BabelNAR.jl**](https://github.com/ARCJ137442/BabelNAR.jl)
-- 🎯为「非公理虚拟机模型」提供程序实现
-- 🎯为各CIN实现**统一输入输出**形式
+- ✨为「非公理虚拟机模型」提供程序实现
+- ✨统一各[CIN](#cin-computer-implement-of-nars)的**输入输出**形式，聚合使用各大NARS实现
 
 ## 概念
 
@@ -22,7 +22,26 @@
 
 🔗参考[**NAVM.jl**的对应部分](https://github.com/ARCJ137442/navm.jl?tab=readme-ov-file#commonnarsese)
 
+## 各CIN对接情况
+
+🕒最后更新时间：【2024-03-25 14:10:36】
+
+| CIN         |    实现方法     | 进程安全 | 输入转译 | 输出转译 |
+| :---------- | :---------: | :--: | :--: | :--: |
+| OpenNARS    | `java -jar` |  ✅   |  ✅   |  🚧  |
+| ONA         |   直接启动exe   |  ✅   |  ✅   |  🚧  |
+| PyNARS      | `python -m` |  ✅   |  🚧  |  🚧  |
+| NARS-Python |   直接启动exe   |  ❓   |  🚧  |  🚧  |
+| OpenJunars  |   `julia`   |  ✅   |  ❌   |  ❌   |
+
+注：
+
+- 🚧输入输出转译功能仍然在从[BabelNAR_Implements](https://github.com/ARCJ137442/BabelNAR_Implements.jl)迁移
+- ❓NARS-Python的exe界面可能会在终止后延时关闭
+- ❌基于`julia`启动OpenJunars脚本`launch.jl`时，对「输出捕获」尚未有成功记录
+
 ## 参考
 
 - [BabelNAR](https://github.com/ARCJ137442/BabelNAR.jl)
+- [BabelNAR_Implements](https://github.com/ARCJ137442/BabelNAR_Implements.jl)
 - [NAVM.rs](https://github.com/ARCJ137442/NAVM.rs)

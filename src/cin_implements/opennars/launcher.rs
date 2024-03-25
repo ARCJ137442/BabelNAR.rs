@@ -96,12 +96,12 @@ impl VmLauncher<CommandVmRuntime> for VmJava {
             // 🔥启动
             .launch();
         // 设置初始音量
-        self.initial_volume.inspect(|volume| {
+        if let Some(volume) = self.initial_volume {
             // 输入指令，并在执行错误时打印信息
-            if let Err(e) = vm.input_cmd(Cmd::VOL(*volume)) {
+            if let Err(e) = vm.input_cmd(Cmd::VOL(volume)) {
                 println!("无法设置初始音量「{volume}」：{e}");
             }
-        });
+        };
         // 返回
         vm
     }

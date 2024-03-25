@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -38,8 +38,13 @@ features = [] # ! 【2024-03-21 09:24:51】暂时没有特性
 default = []
 # 大杂烩
 bundled = [
-    "implements"
+    "cin_implements"
 ]
 # 各个独立的特性 #
-# 具体接口实现：OpenNARS、ONA、NARS-Python、OpenJunars、PyNARS……
-implements = []
+# 具体接口实现：
+# ✅OpenNARS
+# ✅ONA
+# ✅PyNARS
+# ✅NARS-Python（不稳定）
+# ✅OpenJunars（不稳定）
+cin_implements = []

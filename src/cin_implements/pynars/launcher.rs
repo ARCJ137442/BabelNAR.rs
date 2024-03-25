@@ -12,8 +12,8 @@ use std::{path::PathBuf, process::Command};
 /// 启动Python运行时的命令
 const COMMAND_PYTHON: &str = "python";
 
-/// jar文件启动的默认指令参数
-/// * 🎯默认预置指令：`python -m -jar [.jar文件路径]`
+/// 启动Python模块的默认指令参数
+/// * 🎯默认预置指令：`python -m [当前工作目录下的Python模块]`
 const COMMAND_ARGS_PYTHON: [&str; 1] = ["-m"];
 
 /// PyNARS运行时启动器

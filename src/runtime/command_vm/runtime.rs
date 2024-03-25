@@ -93,11 +93,13 @@ pub(crate) mod test {
     // 定义一系列路径
     // * 📌【2024-03-25 09:28:36】本地调试：都从根目录`BabelNAR.rs`开始
     // * 📄退一级到开发目录，再退一级到各NARS下载目录
+    pub const JAR_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
     pub const EXE_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
     pub const EXE_PATH_PYNARS: &str = r"..\..\NARS-executables\launch-pynars-console-plus.cmd";
-    pub const JAR_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
     pub const MODULE_ROOT_PYNARS: &str = r"..\..\PyNARS-dev";
     pub const MODULE_PATH_PYNARS: &str = r"pynars.ConsolePlus";
+    pub const EXE_PATH_NARS_PYTHON: &str = r"..\..\NARS-executables\main.exe";
+    pub const JL_PATH_OPEN_JUNARS: &str = r"..\..\OpenJunars\launch.jl";
 
     const COMMAND_JAVA: &str = "java";
     const COMMAND_ARGS_JAVA: [&str; 2] = ["-Xmx1024m", "-jar"];
@@ -227,7 +229,7 @@ pub(crate) mod test {
         // 专有闭包 | ⚠️无法再提取出另一个闭包：重复借用问题
         let mut input_cmd_and_await =
             |cmd, contains| input_cmd_and_await_contains(&mut vm, cmd, contains);
-        input_cmd_and_await(Cmd::VOL(0), "");
+        // ! ✅【2024-03-25 13:54:36】现在内置进OpenNARS启动器，不再需要执行此操作
         input_cmd_and_await(Cmd::NSE(nse_task!(<A --> B>.)), "<A --> B>.");
         input_cmd_and_await(Cmd::NSE(nse_task!(<B --> C>.)), "<B --> C>.");
         input_cmd_and_await(Cmd::NSE(nse_task!(<A --> C>?)), "<A --> C>?");

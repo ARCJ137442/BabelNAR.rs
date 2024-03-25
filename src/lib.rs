@@ -17,5 +17,5 @@ pub mod tools;
 // 可选模块 //
 util::feature_pub_mod_and_reexport! {
     // 运行时实现
-    "implements" => impl_runtime
+    "cin_implements" => cin_implements
 }
