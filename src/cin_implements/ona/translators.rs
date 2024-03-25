@@ -148,7 +148,7 @@ fn reform_output_to_narsese(out: &str) -> String {
         })
         => #{&}
         // 删去非必要的「创建时间」
-        => [re_creation_t.replace_all](_, |_: &regex::Captures<'_>| "")
+        => [re_creation_t.replace_all](_, "")
         // 返回字符串 //
         => .into()
     }
