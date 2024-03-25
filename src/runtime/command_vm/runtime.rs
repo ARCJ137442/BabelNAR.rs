@@ -103,8 +103,8 @@ pub(crate) mod test {
     /// 实用测试工具/等待
     pub fn await_fetch_until(
         vm: &mut CommandVmRuntime,
-        criterion: impl Fn(Output, String) -> bool,
-    ) {
+        criterion: impl Fn(&Output, String) -> bool,
+    ) -> Output {
         // 不断拉取输出
         // TODO: 💭【2024-03-24 18:21:28】后续可以结合「流式处理者列表」做集成测试
         loop {
@@ -118,8 +118,8 @@ pub(crate) mod test {
                 _ => println!("捕获到其它输出！内容：{output:?}"),
             }
             // 包含⇒结束
-            if criterion(output, raw_content) {
-                break;
+            if criterion(&output, raw_content) {
+                break output;
             }
         }
     }
@@ -128,8 +128,8 @@ pub(crate) mod test {
     pub fn input_cmd_and_await(
         vm: &mut CommandVmRuntime,
         cmd: Cmd,
-        criterion: impl Fn(Output, String) -> bool,
-    ) {
+        criterion: impl Fn(&Output, String) -> bool,
+    ) -> Output {
         // 构造并输入任务
         vm.input_cmd(cmd).expect("无法输入指令！");
         // 「contains」非空⇒等待
@@ -144,16 +144,19 @@ pub(crate) mod test {
         vm: &mut CommandVmRuntime,
         cmd: Cmd,
         expected_contains: &str,
-    ) {
+    ) -> Option<Output> {
         // 空预期⇒直接输入
         // * 🎯在后边测试中统一使用闭包，并且不会因此「空头拉取输出」
         //   * 📄【2024-03-24 18:47:20】有过「之前的CYC把Answer拉走了，导致后边的Answer等不到」的情况
         // * ⚠️不能简化：区别在「是否会拉取输入，即便条件永真」
         match expected_contains.is_empty() {
-            true => vm.input_cmd(cmd).expect("无法输入NAVM指令！"),
-            false => input_cmd_and_await(vm, cmd, |_, raw_content| {
+            true => {
+                vm.input_cmd(cmd).expect("无法输入NAVM指令！");
+                None
+            }
+            false => Some(input_cmd_and_await(vm, cmd, |_, raw_content| {
                 raw_content.contains(expected_contains)
-            }),
+            })),
         }
     }
 
@@ -217,6 +220,7 @@ pub(crate) mod test {
         _test_opennars(vm);
     }
 
+    /// 通用测试/OpenNARS
     pub fn _test_opennars(mut vm: CommandVmRuntime) {
         // 专有闭包 | ⚠️无法再提取出另一个闭包：重复借用问题
         let mut input_cmd_and_await =
@@ -250,6 +254,28 @@ pub(crate) mod test {
         _test_pynars(vm);
     }
 
+    /// 通用测试/ONA
+    pub fn _test_ona(mut vm: CommandVmRuntime) {
+        // 专有闭包 | ⚠️无法再提取出另一个闭包：重复借用问题
+        let mut input_cmd_and_await =
+            |cmd, contains| input_cmd_and_await_contains(&mut vm, cmd, contains);
+        // input_cmd_and_await(Cmd::VOL(0), "");
+        input_cmd_and_await(Cmd::NSE(nse_task!(<A --> B>.)), "<A --> B>.");
+        input_cmd_and_await(Cmd::NSE(nse_task!(<B --> C>.)), "<B --> C>.");
+        input_cmd_and_await(Cmd::NSE(nse_task!(<A --> C>?)), "<A --> C>?");
+        input_cmd_and_await(Cmd::CYC(5), ""); // * CYC无需自动等待
+
+        // 等待回答（字符串）
+        await_fetch_until(&mut vm, |o, raw_content| {
+            matches!(o, Output::ANSWER { .. }) && raw_content.contains("<A --> C>.")
+        });
+
+        // 终止虚拟机
+        vm.terminate().expect("无法终止虚拟机");
+        println!("Virtual machine terminated...");
+    }
+
+    /// 通用测试/PyNARS
     pub fn _test_pynars(mut vm: CommandVmRuntime) {
         // // 睡眠等待
         // // std::thread::sleep(std::time::Duration::from_secs(1));

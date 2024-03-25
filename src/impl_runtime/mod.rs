@@ -6,7 +6,7 @@
 pub mod opennars;
 
 // ONA
-// TODO: 具体实现
+pub mod ona;
 
 // NARS-Python
 // TODO: 具体实现
