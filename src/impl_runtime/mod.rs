@@ -12,7 +12,7 @@ pub mod ona;
 // TODO: 具体实现
 
 // PyNARS
-// TODO: 具体实现
+pub mod pynars;
 
 // OpenJunars
 // TODO: 具体实现

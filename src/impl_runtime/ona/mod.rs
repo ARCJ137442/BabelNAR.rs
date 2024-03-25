@@ -19,10 +19,10 @@ mod tests {
 
     #[test]
     fn test() {
-        // 从别的地方获取jar路径
-        let jar_path = EXE_PATH_ONA;
+        // 从别的地方获取exe路径
+        let exe_path = EXE_PATH_ONA;
         // 一行代码启动ONA
-        let vm = Ona::new(jar_path).launch();
+        let vm = ONA::new(exe_path).launch();
         // 直接复用之前对ONA的测试
         _test_ona(vm)
     }

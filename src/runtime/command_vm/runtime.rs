@@ -91,11 +91,13 @@ pub(crate) mod test {
     use util::first;
 
     // 定义一系列路径
-    #[allow(dead_code)]
+    // * 📌【2024-03-25 09:28:36】本地调试：都从根目录`BabelNAR.rs`开始
+    // * 📄退一级到开发目录，再退一级到各NARS下载目录
     pub const EXE_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
-    #[allow(dead_code)]
     pub const EXE_PATH_PYNARS: &str = r"..\..\NARS-executables\launch-pynars-console-plus.cmd";
     pub const JAR_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
+    pub const MODULE_ROOT_PYNARS: &str = r"..\..\PyNARS-dev";
+    pub const MODULE_PATH_PYNARS: &str = r"pynars.ConsolePlus";
 
     const COMMAND_JAVA: &str = "java";
     const COMMAND_ARGS_JAVA: [&str; 2] = ["-Xmx1024m", "-jar"];
