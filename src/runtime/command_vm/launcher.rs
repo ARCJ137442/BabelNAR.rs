@@ -2,6 +2,7 @@
 
 use super::{InputTranslator, IoTranslators, OutputTranslator};
 use crate::process_io::IoProcess;
+use anyhow::Result;
 use navm::{cmd::Cmd, output::Output};
 use std::{ffi::OsStr, process::Command};
 
@@ -33,7 +34,7 @@ impl CommandVm {
     /// * 💭何时Rust能给特征起别名。。
     pub fn input_translator(
         mut self,
-        translator: impl Fn(Cmd) -> Result<String, String> + Send + Sync + 'static,
+        translator: impl Fn(Cmd) -> Result<String> + Send + Sync + 'static,
     ) -> Self {
         self.input_translator = Some(Box::new(translator));
         self
@@ -42,18 +43,19 @@ impl CommandVm {
     /// 配置/输出转译器
     pub fn output_translator(
         mut self,
-        translator: impl Fn(String) -> Result<Output, String> + Send + Sync + 'static,
+        translator: impl Fn(String) -> Result<Output> + Send + Sync + 'static,
     ) -> Self {
         self.output_translator = Some(Box::new(translator));
         self
     }
 
     /// 配置/输入输出转译器组
-    pub fn translators(self, translators: impl Into<IoTranslators>) -> Self {
+    pub fn translators(mut self, translators: impl Into<IoTranslators>) -> Self {
         // 一次实现俩
         let translators = translators.into();
-        self.input_translator(translators.input_translator)
-            .output_translator(translators.output_translator)
+        self.input_translator = Some(translators.input_translator);
+        self.output_translator = Some(translators.output_translator);
+        self
     }
 }
 

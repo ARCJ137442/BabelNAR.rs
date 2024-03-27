@@ -6,7 +6,12 @@
         "openjunars",
         "rfind",
         "runpy",
+        "thiserror",
         "traceback",
         "tstate"
-    ]
+    ],
+    "rust-analyzer.linkedProjects": [
+        ".\\Cargo.toml",
+        // ".\\Cargo.toml"
+    ],
 }

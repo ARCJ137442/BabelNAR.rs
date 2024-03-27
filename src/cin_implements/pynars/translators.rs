@@ -4,15 +4,18 @@
 //! * ✨NAVM指令→字符串
 //! * ✨字符串→NAVM输出
 
+use crate::runtime::TranslateError;
+use anyhow::Result;
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
-use util::{pipe, ResultS};
+use regex::Regex;
+use util::pipe;
 
 /// ONA的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「ONA Shell输入」
-pub fn input_translate(cmd: Cmd) -> ResultS<String> {
+pub fn input_translate(cmd: Cmd) -> Result<String> {
     let content = match cmd {
         // 直接使用「末尾」，此时将自动格式化任务（可兼容「空预算」的形式）
         Cmd::NSE(..) => cmd.tail(),
@@ -24,7 +27,8 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
         Cmd::VOL(n) => format!("/volume {n}"),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
-        _ => return Err(format!("该指令类型暂不支持：{cmd:?}")),
+        // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
+        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
     };
     // 转译
     Ok(content)
@@ -32,7 +36,6 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
 
 /// 尝试获取输出类型（「头」文本）
 fn try_get_output_type(inp: &str) -> Option<String> {
-    use regex::Regex;
     // ! `\e` => `\u{1b}`
     let re = Regex::new(r"\u{1b}\[[0-9;]*m").unwrap();
     // let inp = "\u{1b}[48;2;110;10;10m 0.78 \u{1b}[49m\u{1b}[48;2;10;41;10m 0.25 \u{1b}[49m\u{1b}[48;2;10;10;125m 0.90 \u{1b}[49m\u{1b}[33mOUT   :\u{1b}[39m<A-->C>. %1.000;0.810%\r\n";
@@ -67,7 +70,7 @@ fn try_get_output_type(inp: &str) -> Option<String> {
 /// =#
 ///
 /// # * 特殊处理「信息」"INFO"：匹配「INFO」开头的行 样例：`INFO  : Loading RuleMap <LUT.pkl>...`
-pub fn output_translate(content: String) -> ResultS<Output> {
+pub fn output_translate(content: String) -> Result<Output> {
     // 根据冒号分隔一次，然后得到「头部」
     let head = pipe! {
         &content
@@ -92,11 +95,6 @@ pub fn output_translate(content: String) -> ResultS<Output> {
             narsese: None,
         },
         "input" => Output::IN { content },
-        "anticipate" => Output::ANTICIPATE {
-            content_raw: content,
-            // TODO: 有待捕获转译
-            narsese: None,
-        },
         "exe" => Output::EXE {
             content_raw: content,
             // TODO: 有待捕获转译

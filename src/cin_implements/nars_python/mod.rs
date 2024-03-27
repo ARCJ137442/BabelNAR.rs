@@ -34,7 +34,16 @@ mod tests {
     }
 
     /// 测试/NARS-Python
-    /// * ❌【2024-03-26 01:42:14】目前还没法真正截取到输出
+    /// 【2024-03-27 18:29:42】最近一次输出（NARS-Python控制台）：
+    ///
+    /// ```text
+    /// IN: SentenceID:0:ID (A --> B). %1.00;0.90%
+    /// IN: SentenceID:1:ID (B --> C). %1.00;0.90%
+    /// IN: SentenceID:2:ID (A --> C)?
+    /// OUT: SentenceID:3:ID (A --> C). %1.00;0.81%
+    /// ```
+    ///
+    /// ! ❌仍然无法截获其输出
     pub(crate) fn _test_nars_python(mut vm: CommandVmRuntime) {
         // 等待几秒钟，让exe的界面显示出来
         std::thread::sleep(std::time::Duration::from_secs(2));

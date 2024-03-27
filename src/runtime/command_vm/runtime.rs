@@ -8,12 +8,12 @@
 
 use super::{CommandVm, InputTranslator, OutputTranslator};
 use crate::process_io::IoProcessManager;
+use anyhow::Result;
 use navm::{
     cmd::Cmd,
     output::Output,
     vm::{VmLauncher, VmRuntime},
 };
-use util::ResultS;
 
 /// 命令行虚拟机运行时
 /// * 🎯封装「进程通信」逻辑
@@ -31,19 +31,19 @@ pub struct CommandVmRuntime {
 }
 
 impl VmRuntime for CommandVmRuntime {
-    fn input_cmd(&mut self, cmd: Cmd) -> ResultS<()> {
+    fn input_cmd(&mut self, cmd: Cmd) -> Result<()> {
         // 尝试转译
         let input = (self.input_translator)(cmd)?;
         // 置入转译结果
         self.process.put_line(input)
     }
 
-    fn fetch_output(&mut self) -> ResultS<Output> {
+    fn fetch_output(&mut self) -> Result<Output> {
         let s = self.process.fetch_output()?;
         (self.output_translator)(s)
     }
 
-    fn try_fetch_output(&mut self) -> ResultS<Option<Output>> {
+    fn try_fetch_output(&mut self) -> Result<Option<Output>> {
         let s = self.process.try_fetch_output()?;
         // 匹配分支
         match s {
@@ -54,7 +54,7 @@ impl VmRuntime for CommandVmRuntime {
         }
     }
 
-    fn terminate(self) -> ResultS<()> {
+    fn terminate(self) -> Result<()> {
         // 杀死子进程
         self.process.kill()?;
         Ok(())
@@ -85,6 +85,8 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
 /// 单元测试
 #[cfg(test)]
 pub(crate) mod test {
+    use crate::runtime::TranslateError;
+
     use super::*;
     use narsese::conversion::string::impl_lexical::shortcuts::*;
     use std::process::Command;
@@ -183,7 +185,7 @@ pub(crate) mod test {
 
         /// 临时构建的「输入转换」函数
         /// * 🎯用于转换`VOL 0`⇒`*volume=0`，避免大量输出造成进程卡顿
-        fn input_translate(cmd: Cmd) -> ResultS<String> {
+        fn input_translate(cmd: Cmd) -> Result<String> {
             let content = match cmd {
                 // 直接使用「末尾」，此时将自动格式化任务（可兼容「空预算」的形式）
                 Cmd::NSE(..) => cmd.tail(),
@@ -192,14 +194,14 @@ pub(crate) mod test {
                 // VOL指令：调整音量
                 Cmd::VOL(n) => format!("*volume={n}"),
                 // 其它类型
-                _ => return Err(format!("未知指令：{cmd:?}")),
+                _ => return Err(TranslateError(format!("未知指令：{cmd:?}")).into()),
             };
             // 转换
             Ok(content)
         }
 
         /// 临时构建的「输出转换」函数
-        fn output_translate(content: String) -> ResultS<Output> {
+        fn output_translate(content: String) -> Result<Output> {
             // 读取输出
             let output = first! {
                 // 捕获Answer

@@ -12,7 +12,9 @@
 //!   * ⚠️【2024-03-25 13:32:50】
 
 use std::{
+    error::Error,
     ffi::OsStr,
+    fmt::{self, Debug, Display, Formatter},
     io::{BufRead, BufReader, Result as IoResult, Write},
     process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio},
     sync::{
@@ -21,7 +23,22 @@ use std::{
     },
     thread::{self, JoinHandle},
 };
-use util::*;
+// use util::*;
+use anyhow::Result;
+use util::ResultBoost;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IoProcessError(String);
+impl Display for IoProcessError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl Error for IoProcessError {}
+
+fn err(e: impl Debug) -> anyhow::Error {
+    IoProcessError(format!("{e:?}")).into()
+}
 
 /// 统一定义「输出侦听器」的类型
 type OutputListener = dyn FnMut(String) + Send + Sync;
@@ -331,15 +348,17 @@ impl IoProcessManager {
     /// * 🎯用于（阻塞式等待）从子进程中收取输出信息
     /// * 🚩以字符串形式报告错误
     /// * ⚠️【2024-03-24 01:22:02】先前基于自身内置`num_output`的计数方法不可靠：有时会遗漏计数
-    pub fn fetch_output(&mut self) -> ResultS<String> {
+    /// * ❌[`std::sync::PoisonError`]未实现[`Send`]，无法被[`anyhow::Error`]直接捕获
+    /// * ❌[`std::sync::mpsc::RecvError`]未实现[`From`]，无法转换为[`anyhow::Error`]
+    pub fn fetch_output(&mut self) -> Result<String> {
         // 访问自身「子进程输出」字段
         self.child_out
             // 互斥锁锁定
             .lock()
-            .transform_err_string()?
+            .transform_err(err)?
             // 通道接收者接收
             .recv()
-            .transform_err_string()
+            .transform_err(err)
     }
 
     /// 尝试（从「输出通道」中）拉取一个输出
@@ -347,13 +366,13 @@ impl IoProcessManager {
     /// * 🚩类似[`Self::fetch_output`]，但仅在「有输出」时拉取
     /// * 📝[`Receiver`]自带的[`Receiver::try_recv`]就做了这件事
     /// * ⚠️【2024-03-24 01:22:02】先前基于自身内置`num_output`的计数方法不可靠：有时会遗漏计数
-    pub fn try_fetch_output(&mut self) -> ResultS<Option<String>> {
+    pub fn try_fetch_output(&mut self) -> Result<Option<String>> {
         // 访问自身「子进程输出」字段，但加上`try`
         let out = self
             .child_out
             // 互斥锁锁定
             .lock()
-            .transform_err_string()?
+            .transform_err(err)?
             // 通道接收者接收
             .try_recv()
             .ok();
@@ -367,17 +386,17 @@ impl IoProcessManager {
     /// * ⚙️返回空，或返回字符串形式的错误（互斥锁错误）
     /// * ⚠️此方法需要【自行尾缀换行符】，否则不被视作有效输入
     ///   * 📄要触发输入，需传入"<A --> B>.\n"而非"<A --> B>."
-    pub fn put(&self, input_line: impl ToString) -> ResultS<()> {
+    pub fn put(&self, input_line: impl ToString) -> Result<()> {
         // 从互斥锁中获取输入
         // * 🚩等待直到锁定互斥锁，最终在作用域结束（MutexGuard析构）时释放（解锁）
         // ! ❌【2024-03-23 23:59:20】此处的闭包无法简化成函数指针
         self.child_in
             // 锁定以获取`Sender`
             .lock()
-            .transform_err_string()?
+            .transform_err(err)?
             // 发送
             .send(input_line.to_string())
-            .transform_err_string()
+            .transform_err(err)
     }
 
     /// 向子进程写入**一行**数据（字符串）
@@ -386,7 +405,7 @@ impl IoProcessManager {
     /// * ⚠️此方法在输入后【自动添加换行符】
     ///   * 📄传入"<A --> B>."将自动转换成"<A --> B>.\n"
     ///   * ✅以此总是触发输入
-    pub fn put_line(&self, input: impl ToString) -> ResultS<()> {
+    pub fn put_line(&self, input: impl ToString) -> Result<()> {
         self.put(format!("{}\n", input.to_string()))
     }
 
@@ -403,11 +422,11 @@ impl IoProcessManager {
     /// * ⚠️将借走自身所有权，终止并销毁自身
     ///
     /// * ❓不稳定：有时会导致「野进程」的情况
-    pub fn kill(mut self) -> ResultS<()> {
+    pub fn kill(mut self) -> Result<()> {
         // ! ❌【2024-03-23 21:08:56】暂不独立其中的逻辑：无法脱开对`self`的借用
         // ! 📌更具体而言：对其中两个线程`thread_write_in`、`thread_read_out`的部分借用
         // 向子线程发送终止信号 //
-        let mut signal = self.termination_signal.lock().transform_err_string()?;
+        let mut signal = self.termination_signal.lock().transform_err(err)?;
         *signal = true;
         drop(signal); // ! 手动释放锁
                       // * 📝【2024-03-24 00:15:10】必须手动释放锁，否则会导致后续线程死锁
@@ -420,7 +439,7 @@ impl IoProcessManager {
         //   * 📌主要原因：在测试OpenNARS时，发现`thread_read_out`仍然会阻塞（无法等待）
         //   * 📌并且一时难以修复：难点在`BufReader.read_line`如何非阻塞/可终止化
         // ! ℹ️信息 from Claude3：无法简单以此终止子线程
-        self.thread_write_in.join().transform_err_debug()?; // * ✅目前这个是可以终止的
+        self.thread_write_in.join().transform_err(err)?; // * ✅目前这个是可以终止的
         drop(self.thread_read_out);
 
         // * 📝此时子线程连同「子进程的标准输入输出」一同关闭，
@@ -444,7 +463,7 @@ impl IoProcessManager {
             }
         }
         // * 🚩通用：调用`Child`对象的`kill`方法
-        self.process.kill().transform_err_string()
+        self.process.kill().transform_err(err)
     }
 }
 

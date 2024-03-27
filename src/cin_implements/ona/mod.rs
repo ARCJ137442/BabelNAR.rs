@@ -8,6 +8,8 @@ util::mod_and_pub_use! {
     translators
     // 启动器
     launcher
+    // 方言 | 【2024-03-27 18:42:50】使用`pest`库解析特殊语法
+    dialect
 }
 
 /// 单元测试

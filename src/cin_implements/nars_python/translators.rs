@@ -11,18 +11,18 @@
 //! * `PREMISE IS TRUE: ((*,{SELF}) --> ^right)`
 //! * `PREMISE IS SIMPLIFIED ({SELF} --> [SAFE]) FROM (&|,({SELF} --> [SAFE]),((*,{SELF}) --> ^right))`
 
+use super::format_in_nars_python;
+use crate::runtime::TranslateError;
+use anyhow::Result;
 use narsese::lexical::Narsese;
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
-use util::ResultS;
-
-use super::format_in_nars_python;
 
 /// NARS-Python的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「NARS-Python输入」
-pub fn input_translate(cmd: Cmd) -> ResultS<String> {
+pub fn input_translate(cmd: Cmd) -> Result<String> {
     let content = match cmd {
         // 使用「末尾」将自动格式化任务（可兼容「空预算」的形式）
         // * ✅【2024-03-26 01:44:49】目前采用特定的「方言格式」解决格式化问题
@@ -31,7 +31,8 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
         // ! NARS-Python Shell同样是自动步进的
         Cmd::CYC(n) => n.to_string(),
         // 其它类型
-        _ => return Err(format!("该指令类型暂不支持：{cmd:?}")),
+        // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
+        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
     };
     // 转译
     Ok(content)
@@ -40,7 +41,7 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
 /// NARS-Python的「输出转译」函数
 /// * 🎯用于将NARS-Python Shell的输出（字符串）转译为「NAVM输出」
 /// * 🚩直接根据选取的「头部」进行匹配
-pub fn output_translate(content: String) -> ResultS<Output> {
+pub fn output_translate(content: String) -> Result<Output> {
     // 根据冒号分隔一次，然后得到「头部」
     let head = content.split_once(':').unwrap_or(("", "")).0.to_lowercase();
     // 根据「头部」生成输出

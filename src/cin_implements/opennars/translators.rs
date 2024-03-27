@@ -15,20 +15,22 @@
 //! * `CONFIRM: <{SELF} --> [SAFE]><{SELF} --> [SAFE]>`
 //! * `DISAPPOINT: <{SELF} --> [SAFE]>`
 //! * `Executed based on: $0.2904;0.1184;0.7653$ <(&/,<{SELF} --> [right_blocked]>,+7,(^left,{SELF}),+55) =/> <{SELF} --> [SAFE]>>. %1.00;0.53%`
+//! * `EXE: $0.11;0.33;0.57$ ^left([{SELF}, a, b, (/,^left,a,b,_)])=null`
 
-use narsese::{
-    conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, structs::ParseResult},
-    lexical::Narsese,
-};
+use super::dialect::parse as parse_narsese_opennars;
+use crate::runtime::TranslateError;
+use anyhow::Result;
+use narsese::lexical::{Narsese, Term};
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
-use util::{ResultBoost, ResultS};
+use regex::Regex;
+use util::ResultBoost;
 
 /// OpenNARS的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「OpenNARS Shell输入」
-pub fn input_translate(cmd: Cmd) -> ResultS<String> {
+pub fn input_translate(cmd: Cmd) -> Result<String> {
     let content = match cmd {
         // 直接使用「末尾」，此时将自动格式化任务（可兼容「空预算」的形式）
         Cmd::NSE(..) => cmd.tail(),
@@ -39,7 +41,8 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
         Cmd::VOL(n) => format!("*volume={n}"),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
-        _ => return Err(format!("该指令类型暂不支持：{cmd:?}")),
+        // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
+        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
     };
     // 转译
     Ok(content)
@@ -48,7 +51,7 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
 /// OpenNARS的「输出转译」函数
 /// * 🎯用于将OpenNARS Shell的输出（字符串）转译为「NAVM输出」
 /// * 🚩直接根据选取的「头部」进行匹配
-pub fn output_translate(content_raw: String) -> ResultS<Output> {
+pub fn output_translate(content_raw: String) -> Result<Output> {
     // 根据冒号分隔一次，然后得到「头部」
     let (head, tail) = content_raw.split_once(':').unwrap_or(("", &content_raw));
     // 根据「头部」生成输出
@@ -74,15 +77,18 @@ pub fn output_translate(content_raw: String) -> ResultS<Output> {
             content_raw,
         },
         "EXE" => Output::EXE {
-            operation: parse_operation_opennars(&content_raw),
+            operation: parse_operation_opennars(tail.trim_start()),
             content_raw,
         },
-        "ANTICIPATE" => Output::ANTICIPATE {
+        // ! 🚩【2024-03-27 19:40:37】现在将ANTICIPATE降级到`UNCLASSIFIED`
+        "ANTICIPATE" => Output::UNCLASSIFIED {
+            // 指定的头部
+            r#type: "ANTICIPATE".to_string(),
             // 先提取其中的Narsese | ⚠️借用了`content_raw`
             narsese: strip_parse_narsese(tail)
                 .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
             // 然后传入整个内容
-            content_raw,
+            content: content_raw,
         },
         "ERR" | "ERROR" => Output::ERROR {
             description: content_raw,
@@ -91,6 +97,8 @@ pub fn output_translate(content_raw: String) -> ResultS<Output> {
         upper if head == upper => Output::UNCLASSIFIED {
             r#type: head.to_string(),
             content: content_raw,
+            // 默认不捕获Narsese
+            narsese: None,
         },
         // 其它
         _ => Output::OTHER {
@@ -101,20 +109,67 @@ pub fn output_translate(content_raw: String) -> ResultS<Output> {
     Ok(output)
 }
 
+#[test]
+fn t() {
+    dbg!(parse_operation_opennars(
+        "$0.11;0.33;0.57$ ^left([{SELF}, a, b, (/,^left,a,b,_)])=null"
+    ));
+}
+
 /// 在OpenNARS输出中解析出「NARS操作」
+/// * 📄`$0.11;0.33;0.57$ ^left([{SELF}, a, b, (/,^left,a,b,_)])=null`
+/// * 📌目前能提取出其中的预算值，但实际上还是需要
 ///
 /// TODO: 结合正则表达式进行解析
-pub fn parse_operation_opennars(content_raw: &str) -> Operation {
-    // use regex::Regex;
+/// TODO: 后续使用[`pest`]进行解析
+pub fn parse_operation_opennars(tail: &str) -> Operation {
+    // * 构建正则表达式（仅一次编译）
+    let r = Regex::new(r"(\$[0-9.;]+\$)\s*\^(\w+)\(\[(.*)\]\)=").unwrap();
+
+    // 构建返回值（参数）
+    let mut params = vec![];
+
+    // 提取输出中的字符串
+    let c = r.captures(dbg!(tail));
+    // let budget;
+    let operator_name;
+    let params_str;
+    if let Some(c) = c {
+        // 提取
+        // budget = &c[1];
+        operator_name = c[2].to_string();
+        params_str = &c[3];
+        // 尝试解析
+        for param in params_str.split(", ") {
+            match parse_term_from_operation(param) {
+                Ok(term) => params.push(term),
+                // ? 【2024-03-27 22:29:43】↓是否要将其整合到一个日志系统中去
+                Err(e) => println!("【ERR/EXE】在解析Narsese时出现错误：{e}"),
+            }
+        }
+    } else {
+        operator_name = String::new();
+    }
+
+    // 返回
     Operation {
-        // TODO: 有待捕获转译
-        head: "UNKNOWN".into(),
-        params: vec![content_raw.into()],
+        operator_name,
+        params,
     }
 }
 
+/// 从操作参数中解析出Narsese词项
+fn parse_term_from_operation(term_str: &str) -> Result<Term> {
+    // 首先尝试解析出Narsese
+    let parsed = parse_narsese_opennars(term_str)?;
+    // 其次尝试将其转换成Narsese词项
+    parsed
+        .try_into_term()
+        .transform_err(TranslateError::error_anyhow)
+}
+
 /// 切分尾部字符串，并（尝试）从中解析出Narsese
-fn strip_parse_narsese(tail: &str) -> ResultS<Narsese> {
+fn strip_parse_narsese(tail: &str) -> Result<Narsese> {
     // 提取并解析Narsese字符串
     let narsese = tail
         // 去尾
@@ -126,17 +181,8 @@ fn strip_parse_narsese(tail: &str) -> ResultS<Narsese> {
         // 解析成功⇒提取 & 返回
         Some(Ok(narsese)) => Ok(narsese),
         // 解析失败⇒打印错误日志 | 返回None
-        Some(Err(err)) => Err(format!("输出「OUT」解析失败：{err}")),
+        Some(Err(err)) => Err(TranslateError(format!("输出「OUT」解析失败：{err}")).into()),
         // 未找到括号的情况
-        None => Err("输出「OUT」解析失败：未找到「{」".into()),
+        None => Err(TranslateError::from("输出「OUT」解析失败：未找到「{」").into()),
     }
-}
-
-/// 以OpenNARS的语法解析出Narsese
-/// * 🚩【2024-03-25 21:08:34】目前是直接调用ASCII解析器
-///
-/// TODO: 兼容OpenNARS特有之语法
-/// * 📌重点在其简写的「操作」语法`(^left, {SELF}, x)` => `<(*, {SELF}, x) --> ^left>`
-fn parse_narsese_opennars(input: &str) -> ParseResult {
-    FORMAT_ASCII.parse(input)
 }

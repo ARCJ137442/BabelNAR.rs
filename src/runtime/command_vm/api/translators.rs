@@ -1,21 +1,20 @@
+use anyhow::Result;
 use navm::{cmd::Cmd, output::Output};
-use util::ResultS;
+use std::{error::Error, fmt::Display};
 
 /// [`Cmd`]→进程输入 转译器
 /// * 🚩现在不再使用特征，以便在`Option<Box<InputTranslator>>`中推断类型
 ///   * 📝若给上边类型传入值`None`，编译器无法自动推导合适的类型
 /// * 📌要求线程稳定
 ///   * 只有转译功能，没有其它涉及外部的操作（纯函数）
-/// TODO: 在后续的「NSE指令输入」时，需要通过「自动将『空预算任务』作为语句输入」应对「`$$ A.`→`A.`」的情况
-/// * ⚠️转译有可能失败：此时返回并上报错误信息
-pub type InputTranslator = dyn Fn(Cmd) -> Result<String, String> + Send + Sync;
+pub type InputTranslator = dyn Fn(Cmd) -> Result<String> + Send + Sync;
 
 /// 进程输出→[`Output`]转译器
 /// * 🚩现在不再使用特征，以便在`Option<Box<OutputTranslator>>`中推断类型
 ///   * 📝若给上边类型传入值`None`，编译器无法自动推导合适的类型
 /// * 📌要求线程稳定
 ///   * 只有转译功能，没有其它涉及外部的操作（纯函数）
-pub type OutputTranslator = dyn Fn(String) -> Result<Output, String> + Send + Sync;
+pub type OutputTranslator = dyn Fn(String) -> Result<Output> + Send + Sync;
 
 /// IO转换器配置
 /// * 🎯封装并简化其它地方的`translator: impl Fn(...) -> ... + ...`逻辑
@@ -34,8 +33,8 @@ impl IoTranslators {
     /// * 📌需要直接传入闭包（要求全局周期`'static`）
     pub fn new<I, O>(i: I, o: O) -> Self
     where
-        I: Fn(Cmd) -> ResultS<String> + Send + Sync + 'static,
-        O: Fn(String) -> ResultS<Output> + Send + Sync + 'static,
+        I: Fn(Cmd) -> Result<String> + Send + Sync + 'static,
+        O: Fn(String) -> Result<Output> + Send + Sync + 'static,
     {
         Self {
             input_translator: Box::new(i),
@@ -69,13 +68,64 @@ impl Default for IoTranslators {
 ///     * 📄[`super::super::CommandVm::translators`]
 impl<I, O> From<(I, O)> for IoTranslators
 where
-    I: Fn(Cmd) -> ResultS<String> + Send + Sync + 'static,
-    O: Fn(String) -> ResultS<Output> + Send + Sync + 'static,
+    I: Fn(Cmd) -> Result<String> + Send + Sync + 'static,
+    O: Fn(String) -> Result<Output> + Send + Sync + 'static,
 {
     fn from(value: (I, O)) -> Self {
         Self::new(value.0, value.1)
     }
 }
+
+/// 统一封装「转译错误」
+/// * 🎯用于在[`anyhow`]下封装字符串，不再使用裸露的[`String`]类型
+/// * 🎯用于可识别的错误，并在打印时直接展示原因
+///   * ⚠️若直接使用[`anyhow::anyhow`]，会打印一大堆错误堆栈
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TranslateError(pub String);
+
+// ! ❌【2024-03-27 22:40:22】无法正常使用：不能导出带`format!`的宏
+// * error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+// #[macro_export]
+// macro_rules! translate_error {
+//     ($($t:tt)*) => {
+//         TranslateError(format!($($t)*))
+//     };
+// }
+
+/// 灵活地从字符串转换为[`TranslateError`]
+impl<S: AsRef<str>> From<S> for TranslateError {
+    fn from(value: S) -> Self {
+        Self(value.as_ref().to_string())
+    }
+}
+
+/// 灵活地从[`Error`]转换为[`TranslateError`]
+impl TranslateError {
+    /// 从[`Error`]转换为[`TranslateError`]
+    pub fn from_error(value: impl Error) -> Self {
+        Self(value.to_string())
+    }
+    /// 从[`Error`]转换为[`anyhow::Error`]
+    pub fn error_anyhow(value: impl Error) -> anyhow::Error {
+        Self::from_error(value).into()
+    }
+    /// 从[`Self::from`]转换到[`anyhow::Error`]
+    /// * 🚩封装为自身类型
+    /// * ❗实际上`.into()`比`::anyhow`短
+    ///   * 📌尽可能用前者
+    pub fn anyhow(value: impl Into<Self>) -> anyhow::Error {
+        // ! ❌【2024-03-27 22:59:51】不能使用`Self::from(value).into`：`AsRef<str>`不一定实现`Into<Self>`
+        anyhow::Error::from(value.into())
+    }
+}
+/// 展示错误
+impl Display for TranslateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TranslateError: {}", self.0)
+    }
+}
+/// 实现[`Error`]特征
+impl Error for TranslateError {}
 
 /// 单元测试
 #[cfg(test)]
@@ -84,6 +134,7 @@ mod tests {
 
     #[test]
     fn test() {
+        // TODO: 【2024-03-27 22:56:26】有待完善
         let _t1 = IoTranslators::default();
     }
 }

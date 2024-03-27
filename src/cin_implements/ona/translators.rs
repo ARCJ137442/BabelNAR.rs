@@ -15,20 +15,19 @@
 //! * `^left executed with args ({SELF} * x)`
 //! * `decision expectation=0.616961 implication: <((<{SELF} --> [left_blocked]> &/ ^say) &/ <(* {SELF}) --> ^left>) =/> <{SELF} --> [SAFE]>>. Truth: frequency=0.978072 confidence=0.394669 dt=1.000000 precondition: <{SELF} --> [left_blocked]>. :|: Truth: frequency=1.000000 confidence=0.900000 occurrenceTime=50`
 
-use narsese::{
-    conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, structs::ParseResult},
-    lexical::Narsese,
-};
+use super::dialect::parse as parse_narsese_ona;
+use anyhow::Result;
+use narsese::conversion::string::impl_lexical::structs::ParseResult;
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
 use regex::Regex;
-use util::{pipe, ResultBoost, ResultS};
+use util::{if_return, pipe, ResultBoost};
 
 /// ONA的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「ONA Shell输入」
-pub fn input_translate(cmd: Cmd) -> ResultS<String> {
+pub fn input_translate(cmd: Cmd) -> Result<String> {
     let content = match cmd {
         // 直接使用「末尾」，此时将自动格式化任务（可兼容「空预算」的形式）
         Cmd::NSE(..) => cmd.tail(),
@@ -39,7 +38,13 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
         Cmd::VOL(n) => format!("*volume={n}"),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
-        _ => return Err(format!("该指令类型暂不支持：{cmd:?}")),
+        _ => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("该指令类型暂不支持：{cmd:?}"),
+            )
+            .into())
+        }
     };
     // 转译
     Ok(content)
@@ -48,7 +53,11 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
 /// ONA的「输出转译」函数
 /// * 🎯用于将ONA Shell的输出（字符串）转译为「NAVM输出」
 /// * 🚩直接根据选取的「头部」进行匹配
-pub fn output_translate(content_raw: String) -> ResultS<Output> {
+pub fn output_translate(content_raw: String) -> Result<Output> {
+    // 特别处理：终止信号
+    if_return! {
+        content_raw.contains("Test failed.") => Ok(Output::TERMINATED { description: content_raw })
+    }
     // 根据冒号分隔一次，然后得到「头部」
     let (head, tail) = content_raw.split_once(':').unwrap_or(("", ""));
     // 根据「头部」生成输出
@@ -87,6 +96,8 @@ pub fn output_translate(content_raw: String) -> ResultS<Output> {
         _ if !content_raw.contains(char::is_whitespace) => Output::UNCLASSIFIED {
             r#type: head.into(),
             content: content_raw,
+            // 不尝试捕获Narsese | 💭后续或许可以自动捕获？
+            narsese: None,
         },
         // 其它
         _ => Output::OTHER {
@@ -102,13 +113,14 @@ pub fn parse_operation_ona(content_raw: &str) -> Operation {
     println!("截获到操作：{content_raw:?}");
     Operation {
         // TODO: 有待分析
-        head: "UNKNOWN".into(),
-        params: vec![content_raw.into()],
+        operator_name: "UNKNOWN".into(),
+        params: vec![],
     }
 }
 
 /// （尝试）从输出中解析出Narsese
-pub fn try_parse_narsese(tail: &str) -> ResultS<Narsese> {
+/// * ❌【2024-03-27 22:01:18】目前引入[`anyhow::Error`]会出问题：不匹配/未满足的特征
+pub fn try_parse_narsese(tail: &str) -> ParseResult {
     // 提取并解析Narsese字符串
     pipe! {
         tail
@@ -119,7 +131,7 @@ pub fn try_parse_narsese(tail: &str) -> ResultS<Narsese> {
         => #{&}
         => parse_narsese_ona
         // 转换错误 | 解析失败⇒返回错误信息 | 返回None
-        => .transform_err(|err| format!("输出「OUT」解析失败：{err}"))
+        // => .transform_err(|err| format!("输出「OUT」解析失败：{err}"))
     }
 }
 
@@ -152,17 +164,6 @@ fn reform_output_to_narsese(out: &str) -> String {
         // 返回字符串 //
         => .into()
     }
-}
-
-/// 以OpenNARS的语法解析出Narsese
-/// * 🚩【2024-03-25 21:08:34】目前是直接调用ASCII解析器
-///
-/// TODO: 兼容ONA的方言语法
-/// * 📌重点在「用空格分隔乘积词项/中缀情形」的语法
-///   * 📄`(* {SELF})`
-///   * 📄`({SELF} * x)`
-fn parse_narsese_ona(target: &str) -> ParseResult {
-    FORMAT_ASCII.parse(target)
 }
 
 /// 单元测试

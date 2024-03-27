@@ -5,15 +5,17 @@
 //!
 //! TODO: 🚧自OpenNARS复制而来，一些地方需要特别适配
 
+use anyhow::Result;
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
-use util::ResultS;
+
+use crate::runtime::TranslateError;
 
 /// OpenJunars的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「OpenJunars Shell输入」
-pub fn input_translate(cmd: Cmd) -> ResultS<String> {
+pub fn input_translate(cmd: Cmd) -> Result<String> {
     let content = match cmd {
         // 直接使用「末尾」，此时将自动格式化任务（可兼容「空预算」的形式）
         Cmd::NSE(..) => cmd.tail(),
@@ -21,7 +23,8 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
         Cmd::CYC(n) => format!(":c {n}"),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
-        _ => return Err(format!("该指令类型暂不支持：{cmd:?}")),
+        // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
+        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
     };
     // 转译
     Ok(content)
@@ -30,7 +33,7 @@ pub fn input_translate(cmd: Cmd) -> ResultS<String> {
 /// OpenJunars的「输出转译」函数
 /// * 🎯用于将OpenJunars Shell的输出（字符串）转译为「NAVM输出」
 /// * 🚩直接根据选取的「头部」进行匹配
-pub fn output_translate(content: String) -> ResultS<Output> {
+pub fn output_translate(content: String) -> Result<Output> {
     // 根据冒号分隔一次，然后得到「头部」
     let head = content.split_once(':').unwrap_or(("", "")).0.to_lowercase();
     // 根据「头部」生成输出
@@ -46,11 +49,6 @@ pub fn output_translate(content: String) -> ResultS<Output> {
             narsese: None,
         },
         "in" => Output::IN { content },
-        "anticipate" => Output::ANTICIPATE {
-            content_raw: content,
-            // TODO: 有待捕获转译
-            narsese: None,
-        },
         "exe" => Output::EXE {
             content_raw: content,
             // TODO: 有待捕获转译

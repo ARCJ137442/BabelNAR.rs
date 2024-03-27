@@ -1,12 +1,28 @@
 [package]
 name = "babel_nar"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
+
+[dependencies]
+
+[dependencies.anyhow]
+version = "1.0.81"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-regex = "1.10.4"
+# Rust版本的正则表达式
+# * 🎯用于解析提取NARS输出
+#   * 📄OpenNARS、ONA、PyNARS
+[dependencies.regex]
+version = "1.10.4"
+optional = true
+
+# Rust版本的PEG解析器
+# * 🎯用于对接一些NARS方言的解析
+#   * 📄OpenNARS（操作语法）、ONA（中缀语法）
+[dependencies.pest]
+version = "2.7.8"
+optional = true
 
 # 用于实现「静态含闭包常量」
 # * 🎯初次引入：NARS-Python 方言格式
@@ -47,7 +63,7 @@ default = []
 # 大杂烩
 bundled = [
     "cin_implements",
-    "lazy_static" # 这个「词法Narsese」也在用
+    "lazy_static", # 这个「词法Narsese」也在用
 ]
 # 各个独立的特性 #
 # 具体接口实现：
@@ -56,4 +72,29 @@ bundled = [
 # ✅PyNARS
 # ✅NARS-Python（不稳定）
 # ✅OpenJunars（不稳定）
-cin_implements = []
+cin_implements = [
+    "opennars",
+    "ona",
+    "pynars",
+    "nars_python",
+    "openjunars",
+]
+# ✅OpenNARS接口
+opennars = [
+    "regex",
+    "pest",
+]
+# ✅ONA接口
+ona = [
+    "regex",
+    "pest",
+]
+# ✅PyNARS接口
+pynars = [
+    "regex",
+    # "pest", # ! 【2024-03-27 20:52:17】无需特别解析方言：其输出即为CommonNarsese
+]
+# ✅NARS-Python接口（不稳定）
+nars_python = []
+# ✅OpenJunars接口（不稳定）
+openjunars = []

@@ -8,6 +8,8 @@ util::mod_and_pub_use! {
     translators
     // 启动器
     launcher
+    // 方言
+    dialect
 }
 
 /// 单元测试
