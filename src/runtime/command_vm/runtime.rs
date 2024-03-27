@@ -214,7 +214,7 @@ pub(crate) mod test {
         }
 
         // 构造并启动虚拟机
-        let vm = CommandVm::from_io_process(command_java.into())
+        let vm = CommandVm::from(command_java)
             // 输入转译器
             .input_translator(input_translate)
             // 输出转译器

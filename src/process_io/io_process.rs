@@ -48,17 +48,7 @@ impl IoProcess {
     pub fn new(program_path: impl AsRef<OsStr>) -> Self {
         // 实际上是构建了一个新[`Command`]对象
         let command = Command::new(program_path);
-        Self::from_command(command)
-    }
-
-    /// 构造函数/自[`Command`]对象
-    /// * 🚩从[`Command`]对象构建实体
-    ///   * ✅这里的[`Command`]必定是未被启动的：Launch之后会变成[`Child`]类型
-    pub fn from_command(command: Command) -> Self {
-        Self {
-            command,
-            out_listener: None,
-        }
+        Self::from(command)
     }
 
     /// 添加命令行参数
@@ -118,12 +108,16 @@ impl IoProcess {
 }
 
 /// 实现/从[`Command`]对象转换为[`IoProcess`]
+/// * ✅这里的[`Command`]必定是未被启动的：Launch之后会变成[`Child`]类型
+/// * 📝即便一些地方没法使用`command.into()`，也可使用`IoProcess::from(command)`
 impl From<Command> for IoProcess {
-    /// 构造函数
-    /// * 🚩从`Command`对象构造实体
-    ///   * 📌直接生成[`Command`]对象，无需额外配置
     fn from(command: Command) -> Self {
-        Self::from_command(command)
+        Self {
+            // 置入命令
+            command,
+            // 侦听器空置
+            out_listener: None,
+        }
     }
 }
 

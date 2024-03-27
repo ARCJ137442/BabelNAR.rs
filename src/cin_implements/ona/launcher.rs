@@ -4,12 +4,16 @@
 //!   * ✨不同启动器可以启动到相同运行时
 
 use super::{input_translate, output_translate};
-use crate::runtime::{CommandVm, CommandVmRuntime};
+use crate::{
+    cin_implements::utils::{generate_command, generate_command_vm},
+    runtime::CommandVmRuntime,
+};
 use navm::{
     cmd::Cmd,
     vm::{VmLauncher, VmRuntime},
 };
-use std::{path::PathBuf, process::Command};
+use std::path::PathBuf;
+use util::pipe;
 
 /// ONA Shell启动的默认指令参数
 /// * 🎯默认预置指令：`[.exe文件路径] shell`
@@ -30,9 +34,7 @@ pub struct ONA {
 }
 
 // ! 🚩【2024-03-25 09:37:22】目前暂时不提取至「VmExe」：预置的`shell`参数需要被处理
-// /// 兼容性别名
-// #[doc(alias = "VmExe")]
-// pub type OpenNARS = VmExe;
+// * ✅【2024-03-27 16:07:48】现在通过作为工具的`generate_command`部分实现了代码复用
 
 impl ONA {
     /// 构造函数
@@ -49,26 +51,25 @@ impl ONA {
 /// 启动到「命令行运行时」
 impl VmLauncher<CommandVmRuntime> for ONA {
     fn launch(self) -> CommandVmRuntime {
-        // 构造指令
-        let mut command = Command::new(self.exe_path);
-        // * 📝这里的`args`、`arg都返回的可变借用。。
-        command.args(COMMAND_ARGS_ONA);
-
         // 构造并启动虚拟机
-        let mut vm = CommandVm::from_io_process(command.into())
+        let mut runtime = pipe! {
+            self.exe_path
+            // 构造指令 | 预置的指令参数
+            => generate_command(_, None::<String>, &COMMAND_ARGS_ONA)
             // * 🚩固定的「输入输出转换器」
-            .input_translator(input_translate)
-            .output_translator(output_translate)
+            => generate_command_vm(_, (input_translate, output_translate))
             // 🔥启动
-            .launch();
+            => .launch()
+        };
+
         // 选择性设置初始音量
         if let Some(volume) = self.initial_volume {
             // 输入指令，并在执行错误时打印信息
-            if let Err(e) = vm.input_cmd(Cmd::VOL(volume)) {
+            if let Err(e) = runtime.input_cmd(Cmd::VOL(volume)) {
                 println!("无法设置初始音量「{volume}」：{e}");
             }
         };
-        vm
+        runtime
     }
 }
 

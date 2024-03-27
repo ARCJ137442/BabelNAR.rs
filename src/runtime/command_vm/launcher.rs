@@ -1,9 +1,9 @@
 //! 命令行虚拟机（构建者）
 
-use super::{InputTranslator, OutputTranslator};
+use super::{InputTranslator, IoTranslators, OutputTranslator};
 use crate::process_io::IoProcess;
 use navm::{cmd::Cmd, output::Output};
-use std::ffi::OsStr;
+use std::{ffi::OsStr, process::Command};
 
 /// 命令行虚拟机（构建者）
 /// * 🎯配置化构造[`CommandVmRuntime`]
@@ -26,23 +26,10 @@ impl CommandVm {
     ///   * 📌直接生成[`IoProcess`]对象，无需额外配置
     pub fn new(program_path: impl AsRef<OsStr>) -> Self {
         let io_process = IoProcess::new(program_path);
-        Self::from_io_process(io_process)
+        Self::from(io_process)
     }
 
-    /// 构造函数/自[`IoProcess`]对象
-    /// * 🚩从[`IoProcess`]对象创建
-    ///   * ✅这里的[`IoProcess`]必定是未被启动的：Launch之后会变成其它类型
-    pub fn from_io_process(io_process: IoProcess) -> Self {
-        Self {
-            // 指令
-            io_process,
-            // 其它暂时置空
-            input_translator: None,
-            output_translator: None,
-        }
-    }
-
-    /// 配置/输入转换器
+    /// 配置/输入转译器
     /// * 💭何时Rust能给特征起别名。。
     pub fn input_translator(
         mut self,
@@ -52,7 +39,7 @@ impl CommandVm {
         self
     }
 
-    /// 配置/输出转换器
+    /// 配置/输出转译器
     pub fn output_translator(
         mut self,
         translator: impl Fn(String) -> Result<Output, String> + Send + Sync + 'static,
@@ -60,15 +47,33 @@ impl CommandVm {
         self.output_translator = Some(Box::new(translator));
         self
     }
+
+    /// 配置/输入输出转译器组
+    pub fn translators(self, translators: impl Into<IoTranslators>) -> Self {
+        // 一次实现俩
+        let translators = translators.into();
+        self.input_translator(translators.input_translator)
+            .output_translator(translators.output_translator)
+    }
 }
 
 /// 实现/从[`IoProcess`]对象转换为[`CommandVm`]对象
+/// * ✅这里的[`IoProcess`]必定是未被启动的：Launch之后会变成其它类型
 impl From<IoProcess> for CommandVm {
     fn from(io_process: IoProcess) -> Self {
         Self {
+            // IO进程
             io_process,
+            // 其它所有置空
             input_translator: None,
             output_translator: None,
         }
+    }
+}
+
+/// 实现/从[`Command`]对象转换为[`CommandVm`]对象
+impl From<Command> for CommandVm {
+    fn from(command: Command) -> Self {
+        Self::from(IoProcess::from(command))
     }
 }
