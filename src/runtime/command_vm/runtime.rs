@@ -85,9 +85,9 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
 /// 单元测试
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::runtime::TranslateError;
 
     use super::*;
+    use crate::runtime::TranslateError;
     use narsese::conversion::string::impl_lexical::shortcuts::*;
     use std::process::Command;
     use util::first;

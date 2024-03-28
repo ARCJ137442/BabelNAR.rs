@@ -16,6 +16,7 @@
 //! * `decision expectation=0.616961 implication: <((<{SELF} --> [left_blocked]> &/ ^say) &/ <(* {SELF}) --> ^left>) =/> <{SELF} --> [SAFE]>>. Truth: frequency=0.978072 confidence=0.394669 dt=1.000000 precondition: <{SELF} --> [left_blocked]>. :|: Truth: frequency=1.000000 confidence=0.900000 occurrenceTime=50`
 
 use super::dialect::parse as parse_narsese_ona;
+use crate::runtime::TranslateError;
 use anyhow::Result;
 use narsese::conversion::string::impl_lexical::structs::ParseResult;
 use navm::{
@@ -38,13 +39,7 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         Cmd::VOL(n) => format!("*volume={n}"),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
-        _ => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                format!("该指令类型暂不支持：{cmd:?}"),
-            )
-            .into())
-        }
+        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
     };
     // 转译
     Ok(content)

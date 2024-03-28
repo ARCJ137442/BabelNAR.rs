@@ -2,6 +2,7 @@
     "rust-analyzer.cargo.features": "all",
     "editor.formatOnSave": true,
     "cSpell.words": [
+        "cxin",
         "Errno",
         "openjunars",
         "rfind",
