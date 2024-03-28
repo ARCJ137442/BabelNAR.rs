@@ -1,17 +1,113 @@
-// TODO: 有待替换
-num = @{ int ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ int)? }
-int =  { ("+" | "-")? ~ ASCII_DIGIT+ }
+narsese = _{
+    task
+  | sentence
+  | term
+}
 
-operation = _{ add | subtract | multiply | divide | power }
-add       =  { "+" }
-subtract  =  { "-" }
-multiply  =  { "*" }
-divide    =  { "/" }
-power     =  { "^" }
+term = {
+    compound
+  | set
+  | statement
+  | atom
+}
 
-expr =  { term ~ (operation ~ term)* }
-term = _{ num | "(" ~ expr ~ ")" }
+// 原子词项
+// * 📝其中的`@`会在「中间有空白符」时报错
+atom         =  {
+    placeholder // 占位符 | 可能会占满
 
-calculation = _{ SOI ~ expr ~ EOI }
+  | atom_prefix ~ atom_content
+}
+placeholder  =  { ("_"+) }
+atom_prefix  = @{
+    (PUNCTUATION | SYMBOL) // 其它带前缀原子词项
 
-WHITESPACE = _{ " " | "\t" }
+  | "" // 词语
+}
+atom_content = @{ word_content }
+
+// 复合词项
+
+compound = ${
+    // * 📝使用前缀「$」允许在此中判断空格
+    ("(" ~ #multi = connecter ~ optional_separator ~ term_list ~ ")")
+  | ("(" ~ term ~ #binary = connecter ~ term ~ ")")
+}
+
+optional_separator = _{ (("," | WHITESPACE) ~ WHITESPACE*) }
+
+// 连接符 | 📝使用` ~ (!"," ~ punct_sym)*`的模式，在每次「尝试延伸」时都匹配
+connecter = @{ punct_sym ~ (!"," ~ punct_sym)* }
+
+// 集合词项
+set = {
+    #ext_set = ("{" ~ term_list ~ "}") // 外延集
+
+  | #int_set = ("[" ~ term_list ~ "]") // 内涵集
+}
+
+term_list = { term ~ ((("," | WHITESPACE) ~ WHITESPACE*) ~ term)* ~ (",")? }
+
+// 陈述
+statement = {
+    "<" ~ term ~ copula ~ term ~ ">"
+}
+
+punct_sym = _{ (PUNCTUATION | SYMBOL) }
+
+copula = @{
+    // (PUNCTUATION | SYMBOL)+
+    (punct_sym ~ "-" ~ punct_sym) // 继承/相似/实例/属性/实例属性
+
+  | (punct_sym ~ "=" ~ punct_sym) // 蕴含/等价
+
+  | (punct_sym ~ punct_sym ~ ">") // 时序性蕴含/时序性等价
+}
+
+// 语句
+
+sentence = { term ~ punctuation ~ stamp ~ truth }
+
+punctuation = @{ PUNCTUATION }
+
+stamp         = @{
+    (":" ~ stamp_content ~ ":") // 有内容的时间戳
+
+  | "" // 空时间戳
+}
+stamp_content = @{
+    "|"
+  | "\\"
+  | "/"
+  | (("+" | "-") ~ ASCII_DIGIT+)
+}
+
+truth              =  {
+    ("%" ~ truth_budget_terms ~ "%") // 有值的真值
+
+  | "" // 空真值
+}
+truth_budget_term  = @{
+    truth_budget_content+
+}
+truth_budget_terms =  {
+    (truth_budget_term ~ (";" ~ truth_budget_term)*)
+  | ""
+}
+
+// 任务
+task   = {
+    budget ~ sentence
+}
+budget = {
+    "$" ~ truth_budget_terms ~ "$"
+}
+
+// 基础设施 //
+// * 📝用于「防止误吃系词」的方法：字符 ~ (要避免的 ~ 字符)*
+word_content         = { word_content_char ~ (!copula ~ word_content_char)* }
+word_content_char    = { LETTER | NUMBER | "_" | "-" }
+truth_budget_content = { ASCII_DIGIT | "." }
+
+// 忽略空白符
+WHITESPACE = _{ WHITE_SPACE }

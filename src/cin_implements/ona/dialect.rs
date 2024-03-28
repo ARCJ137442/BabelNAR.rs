@@ -8,6 +8,12 @@
 use narsese::conversion::string::impl_lexical::{
     format_instances::FORMAT_ASCII, structs::ParseResult,
 };
+use pest::Parser;
+use pest_derive::Parser;
+
+#[derive(Parser)] // ! ↓ 必须从项目根目录开始
+#[grammar = "src/cin_implements/ona/dialect_ona.pest"]
+pub struct DialectParser;
 
 /// 使用[`pest`]将输入的「ONA方言」转换为「词法Narsese」
 /// 以ONA的语法解析出Narsese
@@ -18,7 +24,21 @@ use narsese::conversion::string::impl_lexical::{
 ///   * 📄`(* {SELF})`
 ///   * 📄`({SELF} * x)`
 pub fn parse(input: &str) -> ParseResult {
+    let s = dbg!(DialectParser::parse(Rule::narsese, input));
     FORMAT_ASCII.parse(input)
     // #![allow(unused)]
     // todo!("ONA方言！")
+}
+
+/// 单元测试
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 测试/方言解析器 🚧
+    #[test]
+    fn test_dialect_parser() {
+        let x = parse("<A --> B>.");
+        let _ = dbg!(x);
+    }
 }

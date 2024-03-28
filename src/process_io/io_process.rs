@@ -315,7 +315,7 @@ impl IoProcessManager {
                         listener_code(&buf);
                         // 向「进程消息接收者」传递消息（实际上是「输出」）
                         if let Err(e) = child_out_sender.send(buf.clone()) {
-                            println!("无法接收子进程输出：{e:?}");
+                            println!("无法向主进程发送消息：{e:?}");
                             break;
                         }
                         // // 输出计数
@@ -325,12 +325,19 @@ impl IoProcessManager {
                         // }
                         // ! 【2024-03-24 01:42:46】现在取消「输出计数」机制：计数可能不准确，并且被`try_recv`取代
                     }
-                    // 报错⇒显示错误，终止读取
+                    // 报错⇒处理错误
                     Err(e) => {
-                        println!("子进程报错: {:?}", e);
-                        break;
+                        // 只是「不包含字符」（过早读取）⇒跳过
+                        let message = e.to_string();
+                        if message.contains("stream did not contain") {
+                            // 什么都不做
+                        } else {
+                            println!("无法接收子进程输出：{e:?} in「{buf}」");
+                            break;
+                        }
                     }
                 }
+                // 清空缓冲区
                 buf.clear();
             }
         })

@@ -150,6 +150,5 @@ pub fn try_segment_narsese(input: &str) -> Option<ParseResult> {
 /// * ❌【2024-03-27 22:01:18】目前引入[`anyhow::Error`]会出问题：不匹配/未满足的特征
 pub fn try_parse_narsese(narsese: &str) -> ParseResult {
     // 提取并解析Narsese字符串
-    println!("通过正则表达式解析字符串");
     FORMAT_ASCII.parse(narsese)
 }

@@ -75,3 +75,64 @@ fn shell(mut nars: CommandVmRuntime) {
         input.clear();
     }
 }
+
+/// 单元测试
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use babel_nar::cxin_js::CXinJS;
+    use babel_nar::pynars::PyNARS;
+    use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
+    use navm::cmd::Cmd;
+    use navm::vm::VmLauncher;
+
+    #[test]
+    fn test_20240328() {
+        // let (test1, test2) = generate_test_cmds();
+        // // let nars = CXinJS::new(r"..\cxin-nars-py-to-ts\src\cxin-nars-shell.js");
+        // // let nars = OpenNARS::new(r"..\..\NARS-executables\opennars-304-T-modified.jar");
+        // let nars = ONA::new("..\\..\\NARS-executables\\NAR.exe");
+        // // let nars = PyNARS::new("..\\..\\PyNARS-dev", "pynars.ConsolePlus");
+        // std::thread::sleep(std::time::Duration::from_secs(1));
+        // test_set(nars.launch(), test1);
+    }
+
+    fn test_set(mut nars: impl VmRuntime, test_set: Vec<Cmd>) {
+        for cmd in test_set {
+            nars.input_cmd(cmd);
+        }
+        std::thread::sleep(std::time::Duration::from_secs(5));
+        while let Ok(Some(o)) = nars.try_fetch_output() {
+            println!("{}", format_navm_output(o));
+        }
+    }
+
+    fn format_navm_output(o: Output) -> String {
+        // 以「有无Narsese」作区分
+        match o.get_narsese() {
+            // * 🚩有Narsese⇒包含Narsese
+            Some(nse) => format!(
+                "[{}] (( {} )) {}",
+                o.type_name(),
+                FORMAT_ASCII.format_narsese(nse),
+                o.raw_content()
+            ),
+            // * 🚩无⇒仅包含内容
+            None => format!("[{}] {}", o.type_name(), o.raw_content()),
+        }
+    }
+
+    fn parse_cmd_lines(narsese: impl AsRef<str>) -> Vec<Cmd> {
+        let narsese = narsese.as_ref();
+        let mut result = vec![];
+
+        for line in narsese.split('\n').map(str::trim).filter(|s| !s.is_empty()) {
+            match Cmd::parse(line) {
+                Ok(cmd) => result.push(cmd),
+                Err(e) => println!("{e}"),
+            }
+        }
+
+        result
+    }
+}

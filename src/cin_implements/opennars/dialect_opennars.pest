@@ -1,0 +1,86 @@
+// 空白符 | 所有Unicode空白符
+WHITESPACE = { WHITE_SPACE }
+
+// 总入口：词法Narsese
+narsese = {
+    task
+  | sentence
+  | term
+}
+
+// 任务：有预算的语句
+task = {
+    budget ~ sentence
+}
+
+// 预算 | 不包括「空字串」隐含的「空预算」
+budget            =  {
+    "$" ~ budget_content ~ "$"
+}
+budget_content    =  {
+    (truth_budget_term ~ (";" ~ truth_budget_term))
+  | "" // 空预算
+}
+truth_budget_term = @{ (ASCII_DIGIT | ".")+ }
+
+// 语句 = 词项 标点 时间戳 真值
+sentence = {
+    term ~ punctuation ~ stamp ~ truth
+}
+
+// 词项 = 陈述 | 复合 | 原子
+term = {
+    statement
+  | compound
+  | atom
+}
+
+// 陈述 = <词项 系词 词项>
+statement = {
+    "<" ~ term ~ copula ~ term ~ ">"
+}
+
+copula = @{
+    (punct_sym ~ "-" ~ punct_sym) // 继承/相似/实例/属性/实例属性
+
+  | (punct_sym ~ "=" ~ punct_sym) // 蕴含/等价
+
+  | (punct_sym ~ punct_sym ~ ">") // 时序性蕴含/时序性等价
+}
+
+punct_sym = { (PUNCTUATION | SYMBOL) }
+
+// 复合 = (连接词, 词项...)
+compound = {
+    "(" ~ connecter ~ "," ~ term ~ ("," ~ term)* ~ ")"
+}
+
+connecter = @{ punct_sym ~ (!"," ~ punct_sym)* }
+
+// 原子 = 前缀（可选） 内容
+atom         =  {
+    "_"+ // 占位符
+
+  | (atom_prefix ~ atom_content) // 变量/间隔/操作
+
+  | atom_content // 词语
+}
+atom_prefix  = @{ punct_sym+ }
+atom_content = @{ atom_char ~ (!copula ~ atom_char)* }
+atom_char    =  { LETTER | NUMBER }
+
+// 标点
+punctuation = { (PUNCTUATION | SYMBOL) }
+
+// 时间戳
+stamp = {
+    (":" ~ (!":" ~ ANY)+ ~ ":") // 有内容的时间戳
+
+  | "" // 空时间戳
+}
+
+// 真值
+truth = {
+    ("%" ~ (truth_budget_term ~ (";" ~ truth_budget_term)) ~ "%")
+  | "" // 空真值
+}

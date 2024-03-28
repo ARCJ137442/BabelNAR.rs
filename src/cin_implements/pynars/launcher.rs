@@ -20,16 +20,12 @@ use std::path::PathBuf;
 ///   * ⚠️该配置参考的是PyNARS的`ConsolePlus`模块
 /// * 🚩【2024-03-25 08:55:07】基于Python模块文件启动PyNARS Shell
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct VmPython {
+pub struct PyNARS {
     /// 命令生成器
     command_generator: CommandGeneratorPython,
 }
 
-/// 兼容性别名
-#[doc(alias = "VmPython")]
-pub type PyNARS = VmPython;
-
-impl VmPython {
+impl PyNARS {
     pub fn new(root_path: impl Into<PathBuf>, module_path: &str) -> Self {
         Self {
             command_generator: CommandGeneratorPython::new(root_path, module_path),
@@ -38,7 +34,7 @@ impl VmPython {
 }
 
 /// 启动到「命令行运行时」
-impl VmLauncher<CommandVmRuntime> for VmPython {
+impl VmLauncher<CommandVmRuntime> for PyNARS {
     fn launch(self) -> CommandVmRuntime {
         // 构造指令
         let command = self.command_generator.generate_command();
