@@ -13,9 +13,10 @@ util::mod_and_pub_use! {
 /// 单元测试
 #[cfg(test)]
 mod tests {
+    #![allow(unused)]
     use super::*;
     use crate::runtime::{
-        tests::{await_fetch_until, input_cmd_and_await_contains},
+        tests::{await_fetch_until, input_cmd_and_await_contains, test_simple_answer},
         CommandVmRuntime,
     };
     use narsese::lexical_nse_task as nse_task;
@@ -27,12 +28,18 @@ mod tests {
     /// 测试用路径
     const CXIN_NARS_JS_PATH: &str = r"..\cxin-nars-py-to-ts\src\cxin-nars-shell.js";
 
-    #[test]
-    fn test() {
-        // 从别的地方获取exe路径
+    /// 通用/启动VM
+    fn launch_vm() -> CommandVmRuntime {
+        // 从别的地方获取js路径
         let js_path = CXIN_NARS_JS_PATH;
         // 一行代码启动CxinNARS
-        let vm = CXinJS::new(js_path).launch();
+        CXinJS::new(js_path).launch()
+    }
+
+    /// 测试/专用
+    #[test]
+    fn test() {
+        let vm = launch_vm();
         // 进入专用测试
         _test_cxin_js(vm)
     }
@@ -58,5 +65,14 @@ mod tests {
         // 终止虚拟机
         vm.terminate().expect("无法终止虚拟机");
         println!("Virtual machine terminated...");
+    }
+
+    /// 测试/通用 | 基于Narsese
+    #[test]
+    fn test_universal() {
+        // // 启动OpenNARS虚拟机
+        // let vm = launch_vm();
+        // // 使用通用测试逻辑
+        // test_simple_answer(vm)
     }
 }
