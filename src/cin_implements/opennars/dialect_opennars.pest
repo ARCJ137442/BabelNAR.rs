@@ -73,17 +73,20 @@ compound = {
 }
 
 /// 通用的复合词项
-compound_common = { ("(" ~ connecter ~ "," ~ term ~ ("," ~ term)* ~ ")") }
+compound_common = { ("(" ~ connecter ~ "," ~ term_list ~ ")") }
+
+/// 通用的「词项列表」 | 静默展开
+term_list = _{ term ~ ("," ~ term)* }
 
 /// 🆕OpenNARS特定的「操作简写」输出
 /// * 🚩【2024-03-29 09:40:38】目前通用成`(A, B, C)` => `<(*, B, C) --> A>`的转换方式
-compound_operation = { "(" ~ term ~ ("," ~ term)* ~ ")" }
+compound_operation = { "(" ~ term_list ~ ")" }
 
 /// 外延集 | 📌【2024-03-29 09:39:39】pest代码折叠中会丢掉所有「不被规则捕获的字符串信息」
-ext_set = { "{" ~ term ~ ("," ~ term)* ~ "}" }
+ext_set = { "{" ~ term_list ~ "}" }
 
 /// 内涵集
-int_set = { "[" ~ term ~ ("," ~ term)* ~ "]" }
+int_set = { "[" ~ term_list ~ "]" }
 
 /// 复合词项连接词
 connecter = @{ punct_sym ~ (!"," ~ punct_sym)* }

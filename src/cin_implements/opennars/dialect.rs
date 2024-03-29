@@ -19,10 +19,8 @@ pub struct DialectParser;
 
 /// 使用[`pest`]将输入的「OpenNARS方言」转换为「词法Narsese」
 /// 以OpenNARS的语法解析出Narsese
-/// * 🚩【2024-03-25 21:08:34】目前是直接调用ASCII解析器
 /// * 📌重点在其简写的「操作」语法`(^left, {SELF}, x)` => `<(*, {SELF}, x) --> ^left>`
 pub fn parse(input: &str) -> Result<Narsese> {
-    // let _ = dbg!(FORMAT_ASCII.parse(input).transform_err(anyhow::Error::from));
     // 语法解析
     let pair = DialectParser::parse(Rule::narsese, input)?.next().unwrap();
 
@@ -145,8 +143,6 @@ fn fold_pest_atom(pair: Pair<Rule>) -> Result<Term> {
 /// 折叠[`pest`]复合词项
 /// * 🚩【2024-03-29 09:42:36】因「需要通过规则识别『外延集/内涵集』」通过「进一步向下分发」细化被折叠对象
 fn fold_pest_compound(pair: Pair<Rule>) -> Result<Term> {
-    // compound(0, 7, [connecter(1, 2), atom(3, 4, [atom_content(3, 4)]), atom(5, 6, [atom_content(5, 6)])])
-    // compound(0, 6, [atom(1, 2, [atom_content(1, 2)]), atom(4, 5, [atom_content(4, 5)])])
     let pair = pair.into_inner().next().unwrap();
     match pair.as_rule() {
         Rule::compound_common => {
@@ -161,7 +157,7 @@ fn fold_pest_compound(pair: Pair<Rule>) -> Result<Term> {
             Ok(Term::Compound { connecter, terms })
         }
         Rule::compound_operation => {
-            // * 🚩通用复合词项：连接词 词项...
+            // * 🆕OpenNARS特有的「操作」词项简写...
             let mut pairs = pair.into_inner();
             // 第一个词项应该是谓词
             let predicate = fold_pest_term(pairs.next().unwrap())?;
@@ -227,10 +223,9 @@ fn fold_pest_statement(pair: Pair<Rule>) -> Result<Term> {
 /// 单元测试
 #[cfg(test)]
 mod tests {
+    use super::*;
     use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
     use util::first;
-
-    use super::*;
 
     /// 测试/方言解析器 🚧
     #[test]

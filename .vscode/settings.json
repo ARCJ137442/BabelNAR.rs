@@ -4,12 +4,16 @@
     "cSpell.words": [
         "cxin",
         "Errno",
+        "hasher",
+        "Nalifier",
         "openjunars",
         "rfind",
         "runpy",
+        "setopname",
         "thiserror",
         "traceback",
-        "tstate"
+        "tstate",
+        "whatwarmer"
     ],
     "rust-analyzer.linkedProjects": [
         ".\\Cargo.toml",

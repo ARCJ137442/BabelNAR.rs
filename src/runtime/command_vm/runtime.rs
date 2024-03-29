@@ -88,7 +88,7 @@ pub(crate) mod test {
 
     use super::*;
     use crate::runtime::TranslateError;
-    use narsese::conversion::string::impl_lexical::shortcuts::*;
+    use narsese::conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, shortcuts::*};
     use std::process::Command;
     use util::first;
 
@@ -121,6 +121,18 @@ pub(crate) mod test {
             match &output {
                 // 特别显示「回答」
                 Output::ANSWER { .. } => println!("捕获到回答！内容：{output:?}"),
+                // 特别显示「操作」
+                Output::EXE { operation, .. } => {
+                    println!(
+                        "捕获到操作！操作名称：{:?}，内容：{:?}",
+                        operation.operator_name,
+                        operation
+                            .params
+                            .iter()
+                            .map(|param| FORMAT_ASCII.format_term(param))
+                            .collect::<Vec<_>>()
+                    )
+                }
                 _ => println!("捕获到其它输出！内容：{output:?}"),
             }
             // 包含⇒结束
