@@ -90,12 +90,15 @@ connecter = @{ punct_sym ~ (!"," ~ punct_sym)* }
 
 /// 原子 = 前缀（可选） 内容
 atom = {
-    "_"+ // 占位符
+    placeholder // 占位符
 
   | (atom_prefix ~ atom_content) // 变量/间隔/操作……
 
   | atom_content // 词语
 }
+
+/// 占位符 = 纯下划线字符串
+placeholder = @{ "_"+ }
 
 /// 原子词项前缀
 atom_prefix = @{ punct_sym+ }

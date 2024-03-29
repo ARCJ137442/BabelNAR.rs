@@ -175,7 +175,7 @@ fn strip_parse_narsese(tail: &str) -> Result<Narsese> {
         // 去尾
         .rfind('{')
         // 截取 & 解析
-        .map(|right_index| parse_narsese_opennars(&tail[..right_index]));
+        .map(|right_index| parse_narsese_opennars(tail[..right_index].trim()));
     // 提取解析结果
     match narsese {
         // 解析成功⇒提取 & 返回

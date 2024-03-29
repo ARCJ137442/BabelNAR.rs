@@ -27,7 +27,7 @@ pub fn parse(input: &str) -> Result<Narsese> {
     let pair = DialectParser::parse(Rule::narsese, input)?.next().unwrap();
 
     // 语法折叠
-    let folded = dbg!(fold_pest(pair))?;
+    let folded = fold_pest(pair)?;
 
     // 返回
     Ok(folded)
@@ -95,7 +95,7 @@ fn fold_pest_truth(pair: Pair<Rule>) -> Result<Truth> {
     for pair_value_str in pair.into_inner() {
         v.push(pair_value_str.as_str().to_string());
     }
-    Ok(dbg!(v))
+    Ok(v)
 }
 
 /// 折叠[`pest`]预算值
@@ -125,10 +125,18 @@ fn fold_pest_atom(pair: Pair<Rule>) -> Result<Term> {
     let mut prefix = String::new();
     let mut name = String::new();
     for pair in pair.into_inner() {
+        let pair_str = pair.as_str();
         match pair.as_rule() {
-            Rule::atom_prefix => prefix.push_str(pair.as_str()),
-            Rule::atom_content => name.push_str(pair.as_str()),
-            _ => unreachable!("原子词项只可能有「前缀」与「名称（内容）」两种 | {pair}"),
+            Rule::atom_prefix => prefix.push_str(pair_str),
+            Rule::atom_content => name.push_str(pair_str),
+            // 占位符
+            Rule::placeholder => {
+                prefix.push('_');
+                if pair_str.len() > 1 {
+                    name.push_str(&pair_str[1..]);
+                }
+            }
+            _ => unreachable!("原子词项只可能有「占位符」或「前缀+名称（内容）」两种 | {pair}"),
         }
     }
     Ok(Term::Atom { prefix, name })
@@ -219,13 +227,25 @@ fn fold_pest_statement(pair: Pair<Rule>) -> Result<Term> {
 /// 单元测试
 #[cfg(test)]
 mod tests {
+    use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
+    use util::first;
+
     use super::*;
 
     /// 测试/方言解析器 🚧
     #[test]
     fn test_dialect_parser() {
+        // 统计用
+        let mut 直接相等的个数: usize = 0;
+        let mut 删去空格后相等的个数: usize = 0;
+        let mut 形式有变的 = vec![];
+
         // 📄部分源自`long_term_stability.nal`
         let narseses = "
+        _
+        __
+        ___
+
         <(&|,(^want,{SELF},$1,FALSE),(^anticipate,{SELF},$1)) =|> <(*,{SELF},$1) --> afraid_of>>.
         <A --> B>.
         {A, B}
@@ -274,14 +294,35 @@ mod tests {
         <(&/,<$1 --> [pliable]>,(^reshape,{SELF},$1)) =/> <$1 --> [hardened]>>.
         <<$1 --> [hardened]> =|> <$1 --> [unscrewing]>>.
         (&&,<#1 --> object>,<#1 --> [unscrewing]>)!
-        ";
-        let narseses = narseses
-            .split('\n')
-            .map(str::trim)
-            .filter(|l| !l.is_empty());
+        "
+        // 初步数据处理
+        .split('\n')
+        .map(str::trim)
+        .filter(|l| !l.is_empty());
+
+        // 开始测试解析
+        let 去掉空格 = |s: &str| s.chars().filter(|c| !c.is_whitespace()).collect::<String>();
         for narsese in narseses {
             let parsed = parse(narsese).expect("pest解析失败！");
-            dbg!(parsed);
+            let parsed_str = FORMAT_ASCII.format_narsese(&parsed);
+            // 对齐并展示
+            println!("    {narsese:?}\n => {:?}", parsed_str);
+
+            first! {
+                narsese == parsed_str => 直接相等的个数 += 1,
+                去掉空格(narsese) == 去掉空格(&parsed_str) => 删去空格后相等的个数 += 1,
+                _ => 形式有变的.push((去掉空格(narsese), 去掉空格(&parsed_str))),
+            }
         }
+
+        // 报告
+        println!("✅直接相等的个数：{直接相等的个数}");
+        println!("✅删去空格后相等的个数：{删去空格后相等的个数}");
+        println!("⚠️形式有变的个数：{}", 形式有变的.len());
+        for (n, (narsese, parsed_str)) in 形式有变的.iter().enumerate() {
+            // 报告形式有变的
+            println!("  {n}:\n\t{narsese:?}\n    =?>\t{:?}", parsed_str);
+        }
+        println!("测试完毕！");
     }
 }
