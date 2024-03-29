@@ -109,6 +109,14 @@ impl TranslateError {
     pub fn error_anyhow(value: impl Error) -> anyhow::Error {
         Self::from_error(value).into()
     }
+
+    /// 从「一切可以转换为其自身的值」构建[`anyhow::Result`]
+    pub fn err_anyhow<T, S>(from: S) -> anyhow::Result<T>
+    where
+        Self: From<S>,
+    {
+        Err(Self::from(from).into())
+    }
     /// 从[`Self::from`]转换到[`anyhow::Error`]
     /// * 🚩封装为自身类型
     /// * ❗实际上`.into()`比`::anyhow`短

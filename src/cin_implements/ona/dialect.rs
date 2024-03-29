@@ -24,7 +24,7 @@ pub struct DialectParser;
 ///   * 📄`(* {SELF})`
 ///   * 📄`({SELF} * x)`
 pub fn parse(input: &str) -> ParseResult {
-    let s = dbg!(DialectParser::parse(Rule::narsese, input));
+    let _ = dbg!(DialectParser::parse(Rule::narsese, input));
     FORMAT_ASCII.parse(input)
     // #![allow(unused)]
     // todo!("ONA方言！")

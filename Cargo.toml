@@ -47,7 +47,12 @@ features = []
 path = "../Narsese.rs"
 # git = "https://github.com/ARCJ137442/Narsese.rs"
 # ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
-features = ["bundled"]
+features = [
+    # * 🚩【2024-03-29 09:52:56】在「方言词法折叠」中，需要使用其中的常量
+    "enum_narsese",
+    # * 📌承继NAVM
+    "lexical_narsese",
+]
 
 [dependencies.navm]
 # ! 本地依赖可以不添加版本
