@@ -141,6 +141,8 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             content_raw,
         },
         "input" => Output::IN {
+            // 先提取其中的Narsese | ⚠️借用了`content_raw`
+            narsese: parse_narsese_ona(head, tail)?,
             content: content_raw,
         },
         "err" | "error" => Output::ERROR {

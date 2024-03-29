@@ -83,12 +83,27 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
 }
 
 /// 单元测试
+/// * 🎯作为任何NAVM运行时的共用测试包
+/// * 🚩【2024-03-29 23:23:12】进一步开放：仍然只限定在「测试」环境中使用
 #[cfg(test)]
-pub(crate) mod test {
-
+pub mod tests {
     use super::*;
     use crate::runtime::TranslateError;
-    use narsese::conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, shortcuts::*};
+    use narsese::{
+        api::{GetBudget, GetPunctuation, GetStamp, GetTerm, GetTruth},
+        conversion::{
+            inter_type::lexical_fold::TryFoldInto,
+            string::{
+                impl_enum::format_instances::FORMAT_ASCII as FORMAT_ASCII_ENUM,
+                impl_lexical::{format_instances::FORMAT_ASCII, shortcuts::*},
+            },
+        },
+        enum_narsese::{
+            Budget as EnumBudget, Narsese as EnumNarsese, Sentence as EnumSentence,
+            Task as EnumTask, Truth as EnumTruth,
+        },
+        lexical::Narsese,
+    };
     use std::process::Command;
     use util::first;
 
@@ -175,6 +190,134 @@ pub(crate) mod test {
             false => Some(input_cmd_and_await(vm, cmd, |_, raw_content| {
                 raw_content.contains(expected_contains)
             })),
+        }
+    }
+
+    /// 实用测试工具/输入并等待「Narsese回显」
+    /// * 🚩`input_cmd_and_await`的简单封装
+    /// * ✅【2024-03-29 22:55:11】现在「输出转换」已经成熟（可以提取出Narsese）
+    /// * 🚩通过「转换为『枚举Narsese』」以实现判等逻辑（主要为「语义相等」）
+    #[inline(always)]
+    pub fn input_cmd_and_await_narsese(
+        vm: &mut CommandVmRuntime,
+        cmd: Cmd,
+        expected: Narsese,
+    ) -> Output {
+        // 预先构建预期
+        let expected = expected
+            .clone()
+            .try_fold_into(&FORMAT_ASCII_ENUM)
+            .expect("作为预期的词法Narsese无法折叠！");
+        // 输入 & 等待
+        input_cmd_and_await(vm, cmd, |out, _| {
+            // 有Narsese
+            out.get_narsese().is_some_and(|out| {
+                // 且与预期一致
+                out.clone() // 必须复制：折叠消耗自身
+                    .try_fold_into(&FORMAT_ASCII_ENUM)
+                    .is_ok_and(|out| is_expected_narsese(&expected, &out))
+            })
+        })
+    }
+
+    /// 判断「输出是否（在Narsese语义层面）符合预期」
+    /// * 🎯词法Narsese⇒枚举Narsese，以便从语义上判断
+    pub fn is_expected_narsese_lexical(expected: &Narsese, out: &Narsese) -> bool {
+        // 临时折叠预期
+        let expected = (expected.clone().try_fold_into(&FORMAT_ASCII_ENUM))
+            .expect("作为预期的词法Narsese无法折叠！");
+        // 与预期一致
+        (out.clone() // 必须复制：折叠消耗自身
+            .try_fold_into(&FORMAT_ASCII_ENUM))
+        .is_ok_and(|out| is_expected_narsese(&expected, &out))
+    }
+
+    /// 判断「输出是否（在Narsese层面）符合预期」
+    /// * 🎯预期词项⇒只比较词项，语句⇒只比较语句，……
+    pub fn is_expected_narsese(expected: &EnumNarsese, out: &EnumNarsese) -> bool {
+        match ((expected), (out)) {
+            // 词项⇒只比较词项 | 直接判等
+            (EnumNarsese::Term(term), ..) => term == out.get_term(),
+            // 语句⇒只比较语句
+            // ! 仍然不能直接判等：真值/预算值
+            (
+                EnumNarsese::Sentence(s_exp),
+                EnumNarsese::Sentence(s_out) | EnumNarsese::Task(EnumTask(s_out, ..)),
+            ) => is_expected_sentence(s_exp, s_out),
+            // 任务⇒直接判断
+            // ! 仍然不能直接判等：真值/预算值
+            (EnumNarsese::Task(t_exp), EnumNarsese::Task(t_out)) => is_expected_task(t_exp, t_out),
+            // 所有其它情况⇒都是假
+            (..) => false,
+        }
+    }
+
+    /// 判断输出的任务是否与预期任务相同
+    /// * 🎯用于细粒度判断「预算值」「语句」的预期
+    pub fn is_expected_task(expected: &EnumTask, out: &EnumTask) -> bool {
+        // 预算
+        is_expected_budget(expected.get_budget(), out.get_budget())
+        // 语句
+        && is_expected_sentence(expected.get_sentence(), out.get_sentence())
+    }
+
+    /// 判断输出的语句是否与预期语句相同
+    /// * 🎯用于细粒度判断「真值」的预期
+    pub fn is_expected_sentence(expected: &EnumSentence, out: &EnumSentence) -> bool {
+        // 词项判等
+        ((expected.get_term())==(out.get_term()))
+        // 标点相等
+        && expected.get_punctuation() == out.get_punctuation()
+        // 时间戳相等
+        && expected.get_stamp()== out.get_stamp()
+        // 真值兼容 | 需要考虑「没有真值可判断」的情况
+            && match (expected.get_truth(),out.get_truth()) {
+                // 都有⇒判断「真值是否符合预期」
+                (Some(t_e), Some(t_o)) => is_expected_truth(t_e, t_o),
+                // 都没⇒肯定真
+                (None, None) => true,
+                // 有一个没有⇒肯定假
+                _ => false,
+            }
+    }
+
+    /// 判断「输出是否在真值层面符合预期」
+    /// * 🎯空真值的语句，应该符合「固定真值的语句」的预期——相当于「通配符」
+    pub fn is_expected_truth(expected: &EnumTruth, out: &EnumTruth) -> bool {
+        match (expected, out) {
+            // 预期空真值⇒通配
+            (EnumTruth::Empty, ..) => true,
+            // 预期单真值
+            (EnumTruth::Single(f_e), EnumTruth::Single(f_o) | EnumTruth::Double(f_o, ..)) => {
+                f_e == f_o
+            }
+            // 预期双真值
+            (EnumTruth::Double(..), EnumTruth::Double(..)) => expected == out,
+            // 其它情况
+            _ => false,
+        }
+    }
+
+    /// 判断「输出是否在预算值层面符合预期」
+    /// * 🎯空预算的语句，应该符合「固定预算值的语句」的预期——相当于「通配符」
+    pub fn is_expected_budget(expected: &EnumBudget, out: &EnumBudget) -> bool {
+        match (expected, out) {
+            // 预期空预算⇒通配
+            (EnumBudget::Empty, ..) => true,
+            // 预期单预算
+            (
+                EnumBudget::Single(p_e),
+                EnumBudget::Single(p_o) | EnumBudget::Double(p_o, ..) | EnumBudget::Triple(p_o, ..),
+            ) => p_e == p_o,
+            // 预期双预算
+            (
+                EnumBudget::Double(p_e, d_e),
+                EnumBudget::Double(p_o, d_o) | EnumBudget::Triple(p_o, d_o, ..),
+            ) => p_e == p_o && d_e == d_o,
+            // 预期三预算
+            (EnumBudget::Triple(..), EnumBudget::Triple(..)) => expected == out,
+            // 其它情况
+            _ => false,
         }
     }
 
@@ -328,5 +471,38 @@ pub(crate) mod test {
         File "<frozen runpy>", line 198, in _run_module_as_main
         File "<frozen runpy>", line 88, in _run_code
         */
+    }
+
+    /// 通用测试/简单回答 | 基于Narsese
+    /// * 📌考察NARS最基础的「继承演绎推理」
+    pub fn test_simple_answer(mut vm: CommandVmRuntime) {
+        // 构造并输入任务 | 输入进PyNARS后变成了紧凑版本
+        let _ = vm.input_cmd(Cmd::VOL(0)); // * 尝试静音
+        input_cmd_and_await_narsese(&mut vm, Cmd::NSE(nse_task!(<A --> B>.)), nse!(<A --> B>.));
+        input_cmd_and_await_narsese(&mut vm, Cmd::NSE(nse_task!(<B --> C>.)), nse!(<B --> C>.));
+        input_cmd_and_await_narsese(&mut vm, Cmd::NSE(nse_task!(<A --> C>?)), nse!(<A --> C>?));
+        vm.input_cmd(Cmd::CYC(5)).expect("无法输入CYC指令"); // * CYC无需自动等待
+
+        // 等待回答
+        let expected_answer = nse!(<A --> C>.);
+        await_fetch_until(&mut vm, |output, _| match output {
+            Output::ANSWER { narsese: out, .. } => {
+                is_expected_narsese_lexical(
+                    &expected_answer,
+                    // ! 不允许回答内容为空 | 必须拷贝再比对
+                    &out.clone().expect("预期的回答内容为空！"),
+                )
+            }
+            _ => false,
+        });
+
+        // 打印所有输出
+        while let Some(output) = vm.try_fetch_output().unwrap() {
+            println!("{:?}", output);
+        }
+
+        // 终止虚拟机
+        vm.terminate().expect("无法终止虚拟机");
+        println!("Virtual machine terminated...");
     }
 }

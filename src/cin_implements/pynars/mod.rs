@@ -18,17 +18,36 @@ util::mod_and_pub_use! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime::test::{_test_pynars, MODULE_PATH_PYNARS, MODULE_ROOT_PYNARS};
+    use crate::runtime::{
+        tests::{_test_pynars, test_simple_answer, MODULE_PATH_PYNARS, MODULE_ROOT_PYNARS},
+        CommandVmRuntime,
+    };
     use navm::vm::VmLauncher;
 
-    #[test]
-    fn test() {
+    /// 工具/启动PyNARS，获得虚拟机运行时
+    fn launch_vm() -> CommandVmRuntime {
         // 从别的地方获取Python模块根目录、模块自身路径
         let root_path = MODULE_ROOT_PYNARS;
         let module_path = MODULE_PATH_PYNARS;
         // 一行代码启动PyNARS | `python -m pynars.Console` @ "..\..\PyNARS-dev"
-        let vm = PyNARS::new(root_path, module_path).launch();
+        PyNARS::new(root_path, module_path).launch()
+    }
+
+    /// 测试/先前PyNARS测试
+    #[test]
+    fn test() {
+        // 启动PyNARS虚拟机
+        let vm = launch_vm();
         // 直接复用之前对PyNARS的测试
         _test_pynars(vm)
+    }
+
+    /// 测试/通用 | 基于Narsese
+    #[test]
+    fn test_universal() {
+        // 启动PyNARS虚拟机
+        let vm = launch_vm();
+        // 使用通用测试逻辑
+        test_simple_answer(vm)
     }
 }

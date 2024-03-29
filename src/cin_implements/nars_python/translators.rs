@@ -28,7 +28,7 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         // * ✅【2024-03-26 01:44:49】目前采用特定的「方言格式」解决格式化问题
         Cmd::NSE(narsese) => format_in_nars_python(&Narsese::Task(narsese)),
         // CYC指令：运行指定周期数
-        // ! NARS-Python Shell同样是自动步进的
+        // ! NARS-Python同样是自动步进的
         Cmd::CYC(n) => n.to_string(),
         // 其它类型
         // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
@@ -39,8 +39,8 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
 }
 
 /// NARS-Python的「输出转译」函数
-/// * 🎯用于将NARS-Python Shell的输出（字符串）转译为「NAVM输出」
-/// * 🚩直接根据选取的「头部」进行匹配
+/// * 🎯用于将NARS-Python的输出（字符串）转译为「NAVM输出」
+/// * ❌【2024-03-29 19:45:41】目前尚未能从NARS-Python有效获得输出
 pub fn output_translate(content: String) -> Result<Output> {
     // 根据冒号分隔一次，然后得到「头部」
     let head = content.split_once(':').unwrap_or(("", "")).0.to_lowercase();
@@ -48,20 +48,24 @@ pub fn output_translate(content: String) -> Result<Output> {
     let output = match &*head {
         // TODO: 有待适配
         "answer" => Output::ANSWER {
-            content_raw: content,
             // TODO: 有待捕获转译
             narsese: None,
+            content_raw: content,
         },
         "derived" => Output::OUT {
-            content_raw: content,
             // TODO: 有待捕获转译
             narsese: None,
-        },
-        "input" => Output::IN { content },
-        "exe" => Output::EXE {
             content_raw: content,
+        },
+        "input" => Output::IN {
+            // TODO: 有待捕获转译
+            narsese: None,
+            content,
+        },
+        "exe" => Output::EXE {
             // TODO: 有待捕获转译
             operation: Operation::new("UNKNOWN", [].into_iter()),
+            content_raw: content,
         },
         "err" | "error" => Output::ERROR {
             description: content,

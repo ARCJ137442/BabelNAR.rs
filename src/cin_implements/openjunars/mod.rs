@@ -16,7 +16,7 @@ mod tests {
     #![allow(unused)]
 
     use super::*;
-    use crate::runtime::{test::JL_PATH_OPEN_JUNARS, CommandVmRuntime};
+    use crate::runtime::{tests::JL_PATH_OPEN_JUNARS, CommandVmRuntime};
     use narsese::conversion::string::impl_lexical::shortcuts::*;
     use navm::{
         cmd::Cmd,

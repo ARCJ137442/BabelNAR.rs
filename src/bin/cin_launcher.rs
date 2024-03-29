@@ -7,7 +7,7 @@
 //! TODO: 完成代码
 #![allow(unused)]
 
-use babel_nar::{ona::ONA, opennars::OpenNARS, runtime::CommandVmRuntime};
+use babel_nar::{ona::ONA, opennars::OpenNARS, pynars::PyNARS, runtime::CommandVmRuntime};
 use navm::{
     cmd::Cmd,
     output::Output,
@@ -17,11 +17,13 @@ use std::{fmt::Debug, io::stdin};
 
 const TEST_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
 const TEST_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
+const TEST_PATH_PYNARS: (&str, &str) = ("..\\..\\PyNARS-dev", "pynars.ConsolePlus");
 
 /// 启动NARS
 /// * 🚩【2024-03-27 18:55:07】目前就返回一个测试用的运行时
 fn get_nars() -> impl VmLauncher<CommandVmRuntime> {
-    OpenNARS::new(TEST_PATH_OPENNARS)
+    // OpenNARS::new(TEST_PATH_OPENNARS)
+    PyNARS::new(TEST_PATH_PYNARS.0, TEST_PATH_PYNARS.1)
     // ONA::new(TEST_PATH_ONA)
 }
 

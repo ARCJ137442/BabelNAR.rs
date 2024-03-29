@@ -39,20 +39,24 @@ pub fn output_translate(content: String) -> Result<Output> {
     // 根据「头部」生成输出
     let output = match &*head {
         "answer" => Output::ANSWER {
-            content_raw: content,
             // TODO: 有待捕获转译
             narsese: None,
+            content_raw: content,
         },
         "out" => Output::OUT {
-            content_raw: content,
             // TODO: 有待捕获转译
             narsese: None,
-        },
-        "in" => Output::IN { content },
-        "exe" => Output::EXE {
             content_raw: content,
+        },
+        "in" => Output::IN {
+            // TODO: 有待捕获转译
+            narsese: None,
+            content,
+        },
+        "exe" => Output::EXE {
             // TODO: 有待捕获转译
             operation: Operation::new("UNKNOWN", [].into_iter()),
+            content_raw: content,
         },
         "err" | "error" => Output::ERROR {
             description: content,

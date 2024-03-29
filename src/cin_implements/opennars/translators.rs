@@ -17,7 +17,7 @@
 //! * `Executed based on: $0.2904;0.1184;0.7653$ <(&/,<{SELF} --> [right_blocked]>,+7,(^left,{SELF}),+55) =/> <{SELF} --> [SAFE]>>. %1.00;0.53%`
 //! * `EXE: $0.11;0.33;0.57$ ^left([{SELF}, a, b, (/,^left,a,b,_)])=null`
 
-use super::dialect::parse as parse_narsese_opennars;
+use super::dialect::parse as parse_dialect_opennars;
 use crate::runtime::TranslateError;
 use anyhow::Result;
 use narsese::lexical::{Narsese, Term};
@@ -57,22 +57,23 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
     // 根据「头部」生成输出
     let output = match &*head.to_uppercase() {
         "IN" => Output::IN {
+            // 先提取其中的Narsese | ⚠️借用了`content_raw`
+            narsese: parse_narsese_opennars(head, tail)?,
+            // 然后传入整个内容
             content: content_raw,
         },
         "OUT" => {
             // 返回
             Output::OUT {
                 // 先提取其中的Narsese | ⚠️借用了`content_raw`
-                narsese: strip_parse_narsese(tail)
-                    .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
+                narsese: parse_narsese_opennars(head, tail)?,
                 // 然后传入整个内容
                 content_raw,
             }
         }
         "ANSWER" => Output::ANSWER {
             // 先提取其中的Narsese | ⚠️借用了`content_raw`
-            narsese: strip_parse_narsese(tail)
-                .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
+            narsese: parse_narsese_opennars(head, tail)?,
             // 然后传入整个内容
             content_raw,
         },
@@ -85,7 +86,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             // 指定的头部
             r#type: "ANTICIPATE".to_string(),
             // 先提取其中的Narsese | ⚠️借用了`content_raw`
-            narsese: strip_parse_narsese(tail)
+            narsese: try_parse_narsese(tail)
                 .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
             // 然后传入整个内容
             content: content_raw,
@@ -109,19 +110,29 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
     Ok(output)
 }
 
-#[test]
-fn t() {
-    dbg!(parse_operation_opennars(
-        "$0.11;0.33;0.57$ ^left([{SELF}, a, b, (/,^left,a,b,_)])=null"
-    ));
+/// （ONA）从原始输出中解析Narsese
+/// * 🎯用于结合`#[cfg]`控制「严格模式」
+///   * 🚩生产环境下「Narsese解析出错」仅打印错误信息
+#[cfg(not(test))]
+pub fn parse_narsese_opennars(head: &str, tail: &str) -> Result<Option<Narsese>> {
+    use util::ResultBoost;
+    // ! ↓下方会转换为None
+    Ok(try_parse_narsese(tail)
+        .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")))
+}
+
+/// （ONA）从原始输出中解析Narsese
+/// * 🎯用于结合`#[cfg]`控制「严格模式」
+///   * 🚩测试环境下「Narsese解析出错」会上抛错误
+#[cfg(test)]
+pub fn parse_narsese_opennars(_: &str, tail: &str) -> Result<Option<Narsese>> {
+    // ! ↓下方会上抛错误
+    Ok(Some(try_parse_narsese(tail)?))
 }
 
 /// 在OpenNARS输出中解析出「NARS操作」
 /// * 📄`$0.11;0.33;0.57$ ^left([{SELF}, a, b, (/,^left,a,b,_)])=null`
-/// * 📌目前能提取出其中的预算值，但实际上还是需要
-///
-/// TODO: 结合正则表达式进行解析
-/// TODO: 后续使用[`pest`]进行解析
+/// * 🚩【2024-03-29 22:45:11】目前能提取出其中的预算值，但实际上暂且不需要
 pub fn parse_operation_opennars(tail: &str) -> Operation {
     // * 构建正则表达式（仅一次编译）
     let r = Regex::new(r"(\$[0-9.;]+\$)\s*\^(\w+)\(\[(.*)\]\)=").unwrap();
@@ -161,7 +172,7 @@ pub fn parse_operation_opennars(tail: &str) -> Operation {
 /// 从操作参数中解析出Narsese词项
 fn parse_term_from_operation(term_str: &str) -> Result<Term> {
     // 首先尝试解析出Narsese
-    let parsed = parse_narsese_opennars(term_str)?;
+    let parsed = parse_dialect_opennars(term_str)?;
     // 其次尝试将其转换成Narsese词项
     parsed
         .try_into_term()
@@ -169,13 +180,13 @@ fn parse_term_from_operation(term_str: &str) -> Result<Term> {
 }
 
 /// 切分尾部字符串，并（尝试）从中解析出Narsese
-fn strip_parse_narsese(tail: &str) -> Result<Narsese> {
+fn try_parse_narsese(tail: &str) -> Result<Narsese> {
     // 提取并解析Narsese字符串
     let narsese = tail
         // 去尾
         .rfind('{')
         // 截取 & 解析
-        .map(|right_index| parse_narsese_opennars(tail[..right_index].trim()));
+        .map(|right_index| parse_dialect_opennars(tail[..right_index].trim()));
     // 提取解析结果
     match narsese {
         // 解析成功⇒提取 & 返回

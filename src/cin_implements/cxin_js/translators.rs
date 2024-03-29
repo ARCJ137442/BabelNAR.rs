@@ -76,7 +76,12 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             // 然后传入整个内容
             content_raw,
         },
-        "in" => Output::IN { content: tail },
+        "in" => Output::IN {
+            // 先提取其中的Narsese
+            narsese: segment_narsese(&head, &tail),
+            // 然后传入整个内容
+            content: tail,
+        },
         "out" => Output::OUT {
             // 先提取其中的Narsese
             narsese: segment_narsese(&head, &tail),

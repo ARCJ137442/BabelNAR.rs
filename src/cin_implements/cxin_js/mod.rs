@@ -15,7 +15,7 @@ util::mod_and_pub_use! {
 mod tests {
     use super::*;
     use crate::runtime::{
-        test::{await_fetch_until, input_cmd_and_await_contains},
+        tests::{await_fetch_until, input_cmd_and_await_contains},
         CommandVmRuntime,
     };
     use narsese::lexical_nse_task as nse_task;
