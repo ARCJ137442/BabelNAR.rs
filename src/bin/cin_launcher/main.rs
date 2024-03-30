@@ -3,17 +3,29 @@
 //! * 📌用于集成原先「BabelNAR」「BabelNAR_Implements」两个库
 //! * ✨自动根据可执行文件、配置文件、用户输入猜测CIN类型（字符串匹配）
 //! * ✨自动查找（可能）可用的CIN可执行文件（文件搜索）
+//!   * 📌可根据「匹配度」排名
 //! * ✨自动启动并管理CIN
+//!   * 📌可保存/加载「常用CIN」配置
 //! TODO: 完成代码
 #![allow(unused)]
 
 use babel_nar::{ona::ONA, opennars::OpenNARS, pynars::PyNARS, runtime::CommandVmRuntime};
+use nar_dev_utils::*;
 use navm::{
     cmd::Cmd,
     output::Output,
     vm::{VmLauncher, VmRuntime},
 };
 use std::{fmt::Debug, io::stdin};
+
+mods! {
+    // CIN搜索
+    use pub cin_search;
+    // 输入输出
+    use pub io;
+    // 路径构建器的各CIN实现
+    use pub impls_path_builder;
+}
 
 const TEST_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
 const TEST_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";

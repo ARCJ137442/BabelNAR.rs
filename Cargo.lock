@@ -19,7 +19,7 @@ checksum = "0952808a6c2afd1aa8947271f3a60f1a6763c7b912d210184c5149b5cf147247"
 
 [[package]]
 name = "babel_nar"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "lazy_static",
@@ -105,7 +105,7 @@ checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
 name = "nar_dev_utils"
-version = "0.20.0"
+version = "0.22.0"
 
 [[package]]
 name = "narsese"
