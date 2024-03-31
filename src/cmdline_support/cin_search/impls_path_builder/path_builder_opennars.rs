@@ -3,7 +3,7 @@
 use crate::{
     cin_implements::opennars::OpenNARS,
     cmdline_support::cin_search::{name_match::name_match, path_builder::CinPathBuilder},
-    runtime::CommandVmRuntime,
+    runtimes::CommandVmRuntime,
 };
 use nar_dev_utils::{if_return, OptionBoost};
 use std::path::Path;

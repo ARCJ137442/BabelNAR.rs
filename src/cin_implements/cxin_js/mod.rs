@@ -15,7 +15,7 @@ util::mod_and_pub_use! {
 mod tests {
     #![allow(unused)]
     use super::*;
-    use crate::runtime::{
+    use crate::runtimes::{
         tests::{await_fetch_until, input_cmd_and_await_contains, test_simple_answer},
         CommandVmRuntime,
     };

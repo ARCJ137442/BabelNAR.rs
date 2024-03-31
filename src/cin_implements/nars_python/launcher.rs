@@ -4,7 +4,7 @@
 //!   * ✨不同启动器可以启动到相同运行时
 
 use super::{input_translate, output_translate};
-use crate::runtime::{CommandVm, CommandVmRuntime};
+use crate::runtimes::{CommandVm, CommandVmRuntime};
 use navm::vm::VmLauncher;
 use std::path::PathBuf;
 

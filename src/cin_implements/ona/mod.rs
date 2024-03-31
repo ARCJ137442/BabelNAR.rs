@@ -16,7 +16,7 @@ util::mod_and_pub_use! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime::{
+    use crate::runtimes::{
         tests::{_test_ona, test_simple_answer, EXE_PATH_ONA},
         CommandVmRuntime,
     };

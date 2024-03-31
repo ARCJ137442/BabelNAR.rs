@@ -18,7 +18,7 @@ util::mod_and_pub_use! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime::{
+    use crate::runtimes::{
         tests::{_test_pynars, test_simple_answer, MODULE_PATH_PYNARS, MODULE_ROOT_PYNARS},
         CommandVmRuntime,
     };

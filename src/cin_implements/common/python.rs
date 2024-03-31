@@ -3,7 +3,7 @@
 //! * 🎯封装「NAVM运行时启动过程」中有关「Python启动环境配置」的部分
 //! * 🚩从Python模块（`.py`脚本）启动NARS
 
-use crate::runtime::CommandGenerator;
+use crate::runtimes::CommandGenerator;
 use std::{path::PathBuf, process::Command};
 
 /// 启动Python运行时的命令

@@ -11,7 +11,7 @@ use navm::{
     output::{Operation, Output},
 };
 
-use crate::runtime::TranslateError;
+use crate::runtimes::TranslateError;
 
 /// OpenJunars的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「OpenJunars Shell输入」

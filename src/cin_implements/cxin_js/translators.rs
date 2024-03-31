@@ -15,7 +15,7 @@
 //! * `^left executed with args ({SELF} * x)`
 //! * `decision expectation=0.616961 implication: <((<{SELF} --> [left_blocked]> &/ ^say) &/ <(* {SELF}) --> ^left>) =/> <{SELF} --> [SAFE]>>. Truth: frequency=0.978072 confidence=0.394669 dt=1.000000 precondition: <{SELF} --> [left_blocked]>. :|: Truth: frequency=1.000000 confidence=0.900000 occurrenceTime=50`
 
-use crate::runtime::TranslateError;
+use crate::runtimes::TranslateError;
 use anyhow::Result;
 use narsese::{
     conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, structs::ParseResult},

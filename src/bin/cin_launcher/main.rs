@@ -11,7 +11,7 @@
 
 use babel_nar::{
     cin_implements::{ona::ONA, opennars::OpenNARS, pynars::PyNARS},
-    runtime::CommandVmRuntime,
+    runtimes::CommandVmRuntime,
 };
 use nar_dev_utils::*;
 use navm::{

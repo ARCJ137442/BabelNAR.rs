@@ -88,7 +88,7 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::runtime::TranslateError;
+    use crate::runtimes::TranslateError;
     use narsese::{
         api::{GetBudget, GetPunctuation, GetStamp, GetTerm, GetTruth},
         conversion::{

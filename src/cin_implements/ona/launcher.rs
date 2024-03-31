@@ -6,7 +6,7 @@
 use super::{input_translate, output_translate};
 use crate::{
     cin_implements::common::{generate_command, generate_command_vm},
-    runtime::CommandVmRuntime,
+    runtimes::CommandVmRuntime,
 };
 use navm::{
     cmd::Cmd,

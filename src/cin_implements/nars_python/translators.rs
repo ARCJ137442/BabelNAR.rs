@@ -12,7 +12,7 @@
 //! * `PREMISE IS SIMPLIFIED ({SELF} --> [SAFE]) FROM (&|,({SELF} --> [SAFE]),((*,{SELF}) --> ^right))`
 
 use super::format_in_nars_python;
-use crate::runtime::TranslateError;
+use crate::runtimes::TranslateError;
 use anyhow::Result;
 use narsese::lexical::Narsese;
 use navm::{

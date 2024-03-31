@@ -16,7 +16,7 @@ util::mod_and_pub_use! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime::{tests::EXE_PATH_NARS_PYTHON, CommandVmRuntime};
+    use crate::runtimes::{tests::EXE_PATH_NARS_PYTHON, CommandVmRuntime};
     use narsese::conversion::string::impl_lexical::shortcuts::*;
     use navm::{
         cmd::Cmd,

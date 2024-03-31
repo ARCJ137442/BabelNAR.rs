@@ -8,7 +8,7 @@
 use super::{input_translate, output_translate};
 use crate::{
     cin_implements::common::CommandGeneratorPython,
-    runtime::{CommandGenerator, CommandVm, CommandVmRuntime},
+    runtimes::{CommandGenerator, CommandVm, CommandVmRuntime},
 };
 use navm::vm::VmLauncher;
 use std::path::PathBuf;

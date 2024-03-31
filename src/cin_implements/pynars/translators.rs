@@ -12,7 +12,7 @@
 //! * 📄`\u{1b}[48;2;134;10;10m 0.98 \u{1b}[49m\u{1b}[48;2;10;124;10m 0.90 \u{1b}[49m\u{1b}[48;2;10;10;125m 0.90 \u{1b}[49m\u{1b}[32mANSWER:\u{1b}[39m<A-->C>. %1.000;0.810%\r\n`
 //! * 📄`    \u{1b}[49m    \u{1b}[49m    \u{1b}[49m\u{1b}[32mEXE   :\u{1b}[39m<(*, 0)-->^op> = $0.022;0.232;0.926$ <(*, 0)-->^op>! :\\: %1.000;0.853% {7: 2, 0, 1}\r\n`
 
-use crate::runtime::TranslateError;
+use crate::runtimes::TranslateError;
 use anyhow::{anyhow, Result};
 use narsese::{
     api::ExtractTerms,

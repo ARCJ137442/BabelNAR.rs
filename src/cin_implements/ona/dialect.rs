@@ -3,7 +3,7 @@
 //!   * 📄以空格分隔的词项：`(* {SELF})`
 //!   * 📄`({SELF} * x)`
 
-use crate::runtime::TranslateError;
+use crate::runtimes::TranslateError;
 use anyhow::{Ok, Result};
 use narsese::{
     conversion::string::{

@@ -6,7 +6,7 @@
 use super::{input_translate, output_translate};
 use crate::{
     cin_implements::common::{generate_command_vm, CommandGeneratorNodeJS},
-    runtime::{CommandGenerator, CommandVmRuntime},
+    runtimes::{CommandGenerator, CommandVmRuntime},
 };
 use navm::vm::VmLauncher;
 use std::path::PathBuf;

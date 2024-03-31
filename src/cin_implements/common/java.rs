@@ -4,7 +4,7 @@
 //! * 🚩从jar文件启动NARS
 //! * 🚩【2024-03-27 15:31:02】取消「初始音量」的特化配置，将其变成一个「命令行参数生成器」而非独立的「启动器」
 
-use crate::runtime::CommandGenerator;
+use crate::runtimes::CommandGenerator;
 use std::{path::PathBuf, process::Command};
 
 /// 启动Java运行时的命令

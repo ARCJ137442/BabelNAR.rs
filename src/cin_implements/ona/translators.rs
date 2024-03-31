@@ -25,7 +25,7 @@
 use super::dialect::parse as parse_dialect_ona;
 use crate::{
     cin_implements::ona::{fold_pest_compound, DialectParser, Rule},
-    runtime::TranslateError,
+    runtimes::TranslateError,
 };
 use anyhow::Result;
 use narsese::lexical::{Narsese, Term};

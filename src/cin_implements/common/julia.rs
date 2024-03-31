@@ -3,7 +3,7 @@
 //! * 🎯封装「NAVM运行时启动过程」中有关「Julia启动环境配置」的部分
 //! * 🚩从Julia脚本（`.jl`）启动NARS
 
-use crate::runtime::CommandGenerator;
+use crate::runtimes::CommandGenerator;
 use std::{path::PathBuf, process::Command};
 
 /// 启动Julia运行时的命令

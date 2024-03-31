@@ -18,7 +18,7 @@
 //! * `EXE: $0.11;0.33;0.57$ ^left([{SELF}, a, b, (/,^left,a,b,_)])=null`
 
 use super::dialect::parse as parse_dialect_opennars;
-use crate::runtime::TranslateError;
+use crate::runtimes::TranslateError;
 use anyhow::Result;
 use narsese::lexical::{Narsese, Term};
 use navm::{

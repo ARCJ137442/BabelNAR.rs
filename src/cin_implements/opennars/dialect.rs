@@ -2,7 +2,7 @@
 //! * 🎯解析OpenNARS输出，如
 //!   * 📄特有的「操作」语法：`(^left, {SELF})` => `<(*, {SELF}) --> ^left>`
 
-use crate::runtime::TranslateError;
+use crate::runtimes::TranslateError;
 use anyhow::{Ok, Result};
 use narsese::{
     conversion::string::{

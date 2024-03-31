@@ -7,7 +7,7 @@
 use super::{input_translate, output_translate};
 use crate::{
     cin_implements::common::CommandGeneratorJava,
-    runtime::{CommandGenerator, CommandVm, CommandVmRuntime},
+    runtimes::{CommandGenerator, CommandVm, CommandVmRuntime},
 };
 use navm::{
     cmd::Cmd,
