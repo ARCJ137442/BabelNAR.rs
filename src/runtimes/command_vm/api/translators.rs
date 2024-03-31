@@ -76,64 +76,70 @@ where
     }
 }
 
-/// 统一封装「转译错误」
-/// * 🎯用于在[`anyhow`]下封装字符串，不再使用裸露的[`String`]类型
-/// * 🎯用于可识别的错误，并在打印时直接展示原因
-///   * ⚠️若直接使用[`anyhow::anyhow`]，会打印一大堆错误堆栈
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TranslateError(pub String);
+/// 错误类型
+mod translate_error {
+    use super::*;
 
-// ! ❌【2024-03-27 22:40:22】无法正常使用：不能导出带`format!`的宏
-// * error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
-// #[macro_export]
-// macro_rules! translate_error {
-//     ($($t:tt)*) => {
-//         TranslateError(format!($($t)*))
-//     };
-// }
+    /// 统一封装「转译错误」
+    /// * 🎯用于在[`anyhow`]下封装字符串，不再使用裸露的[`String`]类型
+    /// * 🎯用于可识别的错误，并在打印时直接展示原因
+    ///   * ⚠️若直接使用[`anyhow::anyhow`]，会打印一大堆错误堆栈
+    #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct TranslateError(pub String);
 
-/// 灵活地从字符串转换为[`TranslateError`]
-impl<S: AsRef<str>> From<S> for TranslateError {
-    fn from(value: S) -> Self {
-        Self(value.as_ref().to_string())
+    // ! ❌【2024-03-27 22:40:22】无法正常使用：不能导出带`format!`的宏
+    // * error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
+    // #[macro_export]
+    // macro_rules! translate_error {
+    //     ($($t:tt)*) => {
+    //         TranslateError(format!($($t)*))
+    //     };
+    // }
+
+    /// 灵活地从字符串转换为[`TranslateError`]
+    impl<S: AsRef<str>> From<S> for TranslateError {
+        fn from(value: S) -> Self {
+            Self(value.as_ref().to_string())
+        }
     }
+
+    /// 灵活地从[`Error`]转换为[`TranslateError`]
+    impl TranslateError {
+        /// 从[`Error`]转换为[`TranslateError`]
+        pub fn from_error(value: impl Error) -> Self {
+            Self(value.to_string())
+        }
+        /// 从[`Error`]转换为[`anyhow::Error`]
+        pub fn error_anyhow(value: impl Error) -> anyhow::Error {
+            Self::from_error(value).into()
+        }
+
+        /// 从「一切可以转换为其自身的值」构建[`anyhow::Result`]
+        pub fn err_anyhow<T, S>(from: S) -> anyhow::Result<T>
+        where
+            Self: From<S>,
+        {
+            Err(Self::from(from).into())
+        }
+        /// 从[`Self::from`]转换到[`anyhow::Error`]
+        /// * 🚩封装为自身类型
+        /// * ❗实际上`.into()`比`::anyhow`短
+        ///   * 📌尽可能用前者
+        pub fn anyhow(value: impl Into<Self>) -> anyhow::Error {
+            // ! ❌【2024-03-27 22:59:51】不能使用`Self::from(value).into`：`AsRef<str>`不一定实现`Into<Self>`
+            anyhow::Error::from(value.into())
+        }
+    }
+    /// 展示错误
+    impl Display for TranslateError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "TranslateError: {}", self.0)
+        }
+    }
+    /// 实现[`Error`]特征
+    impl Error for TranslateError {}
 }
-
-/// 灵活地从[`Error`]转换为[`TranslateError`]
-impl TranslateError {
-    /// 从[`Error`]转换为[`TranslateError`]
-    pub fn from_error(value: impl Error) -> Self {
-        Self(value.to_string())
-    }
-    /// 从[`Error`]转换为[`anyhow::Error`]
-    pub fn error_anyhow(value: impl Error) -> anyhow::Error {
-        Self::from_error(value).into()
-    }
-
-    /// 从「一切可以转换为其自身的值」构建[`anyhow::Result`]
-    pub fn err_anyhow<T, S>(from: S) -> anyhow::Result<T>
-    where
-        Self: From<S>,
-    {
-        Err(Self::from(from).into())
-    }
-    /// 从[`Self::from`]转换到[`anyhow::Error`]
-    /// * 🚩封装为自身类型
-    /// * ❗实际上`.into()`比`::anyhow`短
-    ///   * 📌尽可能用前者
-    pub fn anyhow(value: impl Into<Self>) -> anyhow::Error {
-        // ! ❌【2024-03-27 22:59:51】不能使用`Self::from(value).into`：`AsRef<str>`不一定实现`Into<Self>`
-        anyhow::Error::from(value.into())
-    }
-}
-/// 展示错误
-impl Display for TranslateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TranslateError: {}", self.0)
-    }
-}
-/// 实现[`Error`]特征
-impl Error for TranslateError {}
+pub use translate_error::*;
 
 /// 单元测试
 #[cfg(test)]

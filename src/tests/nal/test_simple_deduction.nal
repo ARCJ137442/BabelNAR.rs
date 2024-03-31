@@ -1,0 +1,21 @@
+' 用于测试CIN的「简单演绎推理」
+' * 📝利用现有`Narsese`语法
+'
+' 输出等待 `expect-contains`
+' * 📝统一的NAL等待语法：`''await: 【输入类别】 【其它内容】`
+' * ⚠️可能会阻塞测试，慎用
+' * 🚩以下await已被注释失效，仅作语法演示
+'
+' 输出预期 `expect-contains`
+' * 📝统一的NAL测试语法：`''expect-contains: 【输出类别】 【其它内容】`
+'   * 📄预期「回答」：`''expect-contains: ANSWER 【CommonNarsese】`
+'   * 📄预期「操作」：`''expect-contains: EXE (^【操作名】, 【操作参数（CommonNarsese词项）】)`
+
+<A --> B>.
+' ''await: IN <A --> B>.
+<B --> C>.
+' ''await: IN <B --> C>.
+<A --> C>?
+5
+
+''expect-contains: ANSWER <A --> C>.

@@ -25,4 +25,7 @@ util::mods! {
 
     // 命令行支持
     "cmdline_support" => pub cmdline_support;
+
+    // 测试工具集
+    "test_tools" => pub test_tools;
 }

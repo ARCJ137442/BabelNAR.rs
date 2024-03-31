@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 
 # Cargo文档参考：<https://rustwiki.org/zh-CN/cargo/reference/manifest.html>
@@ -84,7 +84,8 @@ default = []
 ## 大杂烩 ##
 bundled = [
     "cin_implements", # 各大CIN的NAVM实现
-    "cmdline_support" # 命令行支持
+    "cmdline_support", # 命令行支持
+    "test_tools", # 测试工具集
 ]
 
 ## 各个独立的特性 ##
@@ -105,12 +106,12 @@ cin_implements = [
 # ✅OpenNARS接口
 opennars = [
     "regex",
-    "pest",
+    "pest", "pest_derive",
 ]
 # ✅ONA接口
 ona = [
     "regex",
-    "pest",
+    "pest", "pest_derive",
 ]
 # ✅PyNARS接口
 pynars = [
@@ -127,4 +128,10 @@ openjunars = []
 # 命令行支持 #
 cmdline_support = [
     "colored"
+]
+
+# 测试工具集 #
+test_tools = [
+    # 统一`.nal`格式
+    "pest", "pest_derive",
 ]

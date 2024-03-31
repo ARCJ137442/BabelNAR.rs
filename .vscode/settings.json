@@ -6,6 +6,7 @@
         "Errno",
         "hasher",
         "Nalifier",
+        "nanos",
         "openjunars",
         "rfind",
         "runpy",

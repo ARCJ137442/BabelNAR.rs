@@ -124,7 +124,7 @@ pub mod tests {
     /// 实用测试工具/等待
     pub fn await_fetch_until(
         vm: &mut CommandVmRuntime,
-        criterion: impl Fn(&Output, String) -> bool,
+        criterion: impl Fn(&Output, &str) -> bool,
     ) -> Output {
         // 不断拉取输出
         // TODO: 💭【2024-03-24 18:21:28】后续可以结合「流式处理者列表」做集成测试
@@ -161,7 +161,7 @@ pub mod tests {
     pub fn input_cmd_and_await(
         vm: &mut CommandVmRuntime,
         cmd: Cmd,
-        criterion: impl Fn(&Output, String) -> bool,
+        criterion: impl Fn(&Output, &str) -> bool,
     ) -> Output {
         // 构造并输入任务
         vm.input_cmd(cmd).expect("无法输入指令！");
