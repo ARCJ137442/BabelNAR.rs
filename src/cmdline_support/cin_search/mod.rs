@@ -4,16 +4,19 @@
 //!  * 🚩输出：NAVM启动器列表
 //! * ❓【2024-03-30 19:12:29】是否要考虑返回更细化的「CIN实例位置」而非「CIN启动器」，以避免额外的性能开销？
 
-use nar_dev_utils::mods;
-
-/// 导出模块
-mods! {
-    // 路径遍历器
-    use pub path_walker;
-    // 路径构造器
-    use pub path_builder;
+// 导出模块
+util::mods! {
     // anyhow | 弃用
     // anyhow_vm;
     // 名称匹配
-    use pub name_match;
+    pub name_match;
+
+    // 路径遍历器
+    pub path_walker;
+
+    // 路径构建器
+    pub path_builder;
+
+    // 路径构建器的各CIN实现
+    "cin_implements" => pub impls_path_builder;
 }

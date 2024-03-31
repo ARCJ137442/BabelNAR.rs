@@ -4,7 +4,7 @@
 
 该项目使用[语义化版本 2.0.0](https://semver.org/)进行版本号管理。
 
-[**NAVM.rs**](https://github.com/ARCJ137442/NAVM.rs)的**运行时**及[CIN](#cin-computer-implement-of-nars)启动器
+[**NAVM.rs**](https://github.com/ARCJ137442/NAVM.rs)对[CIN](#cin-computer-implement-of-nars)的**启动器**、**运行时**及应用程序实现
 
 - 前身为[**BabelNAR.jl**](https://github.com/ARCJ137442/BabelNAR.jl)
 - ✨为「非公理虚拟机模型」提供程序实现

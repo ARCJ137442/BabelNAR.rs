@@ -9,13 +9,17 @@ pub extern crate nar_dev_utils as util;
 // 必选模块 //
 // 进程IO
 pub mod process_io;
+
 // 运行时
 pub mod runtime;
+
 // （可选的实用）工具
 pub mod tools;
 
 // 可选模块 //
-util::feature_pub_mod_and_reexport! {
+util::mods! {
     // 运行时实现
-    "cin_implements" => cin_implements
+    "cin_implements" => pub cin_implements;
+    // 命令行支持
+    "cmdline_support" => pub cmdline_support;
 }

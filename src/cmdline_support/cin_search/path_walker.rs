@@ -211,7 +211,7 @@ impl Iterator for PathWalkerV1<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::name_match::is_name_match;
+    use crate::cmdline_support::cin_search::name_match::is_name_match;
     use std::env::current_dir;
 
     fn _test_path_walker_v1(start: impl Into<PathBuf>) {
@@ -221,7 +221,7 @@ mod tests {
         fn deep_criterion(path: &Path) -> bool {
             path.file_name()
                 .is_some_and(|name| name.to_str().is_some_and(|s| is_name_match("nars", s)))
-        };
+        }
         // 构建遍历者，加上条件
         let walker = PathWalkerV1::new(start, deep_criterion).unwrap();
         // 打印遍历者的「祖先列表」

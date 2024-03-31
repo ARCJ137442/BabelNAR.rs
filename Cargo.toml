@@ -3,34 +3,15 @@ name = "babel_nar"
 version = "0.9.0"
 edition = "2021"
 
-[dependencies]
-pest_derive = "2.7.8"
+# Cargo文档参考：<https://rustwiki.org/zh-CN/cargo/reference/manifest.html>
 
+## 必要的依赖 ##
+
+[dependencies]
+
+# 用于错误处理
 [dependencies.anyhow]
 version = "1.0.81"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-# Rust版本的正则表达式
-# * 🎯用于解析提取NARS输出
-#   * 📄OpenNARS、ONA、PyNARS
-[dependencies.regex]
-version = "1.10.4"
-optional = true
-
-# Rust版本的PEG解析器
-# * 🎯用于对接一些NARS方言的解析
-#   * 📄OpenNARS（操作语法）、ONA（中缀语法）
-[dependencies.pest]
-version = "2.7.8"
-optional = true
-
-# 用于实现「静态含闭包常量」
-# * 🎯初次引入：NARS-Python 方言格式
-# * 🔗：https://stackoverflow.com/questions/73260997/rust-boxed-closure-in-global-variable
-[dependencies.lazy_static]
-version = "1.4.0"
-optional = true
 
 [dependencies.nar_dev_utils]
 # 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`
@@ -39,7 +20,7 @@ optional = true
 path = "../NAR-dev-util"
 # git = "https://github.com/ARCJ137442/NAR-dev-util"
 # ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
-features = []
+features = [ "bundled" ] # 启用所有特性
 
 [dependencies.narsese]
 # ! 本地依赖可以不添加版本
@@ -62,17 +43,53 @@ path = "../NAVM.rs"
 # ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
 features = [] # ! 【2024-03-21 09:24:51】暂时没有特性
 
-# 定义库的特性
+## 依赖特性的可选依赖 ##
+
+# Rust版本的正则表达式
+# * 🎯用于解析提取NARS输出
+#   * 📄OpenNARS、ONA、PyNARS
+[dependencies.regex]
+version = "1.10.4"
+optional = true
+
+# 用于实现「静态含闭包常量」
+# * 🎯初次引入：NARS-Python 方言格式
+# * 🔗：https://stackoverflow.com/questions/73260997/rust-boxed-closure-in-global-variable
+[dependencies.lazy_static]
+version = "1.4.0"
+optional = true
+
+# Rust版本的PEG解析器
+# * 🎯用于对接一些NARS方言的解析
+#   * 📄OpenNARS（操作语法）、ONA（中缀语法）
+[dependencies.pest]
+version = "2.7.8"
+optional = true
+
+# Rust版本的PEG解析器（派生宏）
+[dependencies.pest_derive]
+version = "2.7.8"
+optional = true
+
+# 命令行支持/彩色终端
+[dependencies.colored]
+version = "2.1.0"
+optional = true
+
+### 定义库的特性 ###
 [features]
-# 默认启用的特性
+
+## 默认启用的特性 ##
 default = []
-# 大杂烩
+## 大杂烩 ##
 bundled = [
-    "cin_implements",
-    "lazy_static", # 这个「词法Narsese」也在用
+    "cin_implements", # 各大CIN的NAVM实现
+    "cmdline_support" # 命令行支持
 ]
-# 各个独立的特性 #
-# 具体接口实现：
+
+## 各个独立的特性 ##
+
+# 具体接口实现（虚拟机启动器） #
 # ✅OpenNARS
 # ✅ONA
 # ✅PyNARS
@@ -101,6 +118,13 @@ pynars = [
     # "pest", # ! 【2024-03-27 20:52:17】无需特别解析方言：其输出即为CommonNarsese
 ]
 # ✅NARS-Python接口（不稳定）
-nars_python = []
+nars_python = [
+    "lazy_static", # 这个「词法Narsese」也在用
+]
 # ✅OpenJunars接口（不稳定）
 openjunars = []
+
+# 命令行支持 #
+cmdline_support = [
+    "colored"
+]
