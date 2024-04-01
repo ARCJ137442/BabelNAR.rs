@@ -2,7 +2,7 @@
 
 use crate::{
     cin_implements::opennars::OpenNARS,
-    cmdline_support::cin_search::{name_match::name_match, path_builder::CinPathBuilder},
+    cli_support::cin_search::{name_match::name_match, path_builder::CinPathBuilder},
     runtimes::CommandVmRuntime,
 };
 use nar_dev_utils::{if_return, OptionBoost};

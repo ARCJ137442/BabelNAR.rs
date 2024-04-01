@@ -5,7 +5,7 @@
 //! TODO: CXinNARS
 //! * 🚩【2024-03-31 01:27:09】其它接口完成度不高的CIN，暂时弃了
 
-use crate::cmdline_support::cin_search::{
+use crate::cli_support::cin_search::{
     name_match::is_name_match, path_builder::CinPathBuilder, path_walker::PathWalker,
 };
 use navm::vm::{VmLauncher, VmRuntime};
@@ -56,7 +56,7 @@ pub fn launchers_from_walker_sorted<R: VmRuntime, L: VmLauncher<R>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cmdline_support::cin_search::path_walker::PathWalkerV1;
+    use crate::cli_support::cin_search::path_walker::PathWalkerV1;
     use std::env::current_dir;
 
     #[test]

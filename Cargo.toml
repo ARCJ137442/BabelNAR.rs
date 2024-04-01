@@ -76,6 +76,27 @@ optional = true
 version = "2.1.0"
 optional = true
 
+# 命令行支持/JSON配置解析
+[dependencies.serde]
+version = "1.0.197"
+optional = true
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1.0.115"
+optional = true
+
+# 命令行支持/Websocket服务
+[dependencies.ws]
+version = "0.9.2"
+optional = true
+
+# 命令行支持/命令行参数解析
+[dependencies.clap]
+version = "4.5.4"
+features = ["derive"]
+optional = true
+
 ### 定义库的特性 ###
 [features]
 
@@ -84,7 +105,7 @@ default = []
 ## 大杂烩 ##
 bundled = [
     "cin_implements", # 各大CIN的NAVM实现
-    "cmdline_support", # 命令行支持
+    "cli_support", # 命令行支持
     "test_tools", # 测试工具集
 ]
 
@@ -126,8 +147,11 @@ nars_python = [
 openjunars = []
 
 # 命令行支持 #
-cmdline_support = [
-    "colored"
+cli_support = [
+    "colored", # 命令行io 彩色打印
+    "serde", "serde_json", # 配置文件解析
+    "ws", # 命令行io Websocket服务
+    "clap" # 命令行参数解析
 ]
 
 # 测试工具集 #

@@ -1,0 +1,19 @@
+{
+    "translators": "opennars",
+    "command": {
+        "cmd": "java",
+        "cmd_args": [
+            "-Xmx1024m",
+            "-jar",
+            "nars.jar"
+        ],
+        "current_dir": "root/nars/test"
+    },
+    "websocket": {
+        "host": "localhost",
+        "port": 8080
+    },
+    "prelude_nal": {
+        "text": "'/VOL 0"
+    }
+}

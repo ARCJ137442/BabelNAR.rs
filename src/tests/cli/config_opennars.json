@@ -1,0 +1,12 @@
+{
+    "translators": "opennars",
+    "command": {
+        "cmd": "java",
+        "cmd_args": [
+            "-Xmx1024m",
+            "-jar",
+            "nars.jar"
+        ],
+        "current_dir": "root/nars/test"
+    }
+}

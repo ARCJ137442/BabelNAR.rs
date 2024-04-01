@@ -246,8 +246,11 @@ G3! :|:
         _test_parse("5");
         _test_parse("'这是一个注释");
         _test_parse("'/VOL 0");
+        _test_parse("'''VOL 0");
         _test_parse("''await: OUT <A --> B>.");
         _test_parse("''sleep: 500ms");
+        _test_parse("''sleep: 5000μs");
+        _test_parse("''sleep: 600ns");
         _test_parse(TESTSET);
     }
 

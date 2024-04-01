@@ -38,9 +38,10 @@ comment_head = _{ "'" }
 /// 有关「置入命令」的「魔法注释」
 /// * ✨允许构建并向NAVM置入指令
 /// * 📄用`'/VOL 0`代替非通用的`*volume=0`
+/// * 📄亦可直接用三个`'`：`'''VOL 0`
 comment_navm_cmd = !{
-    // 特殊前缀`/`
-    "/" ~ WHITESPACE* ~ comment_raw
+    // 特殊前缀`/`或`''`
+    ("/" | "''") ~ WHITESPACE* ~ comment_raw
 }
 
 /// 有关「睡眠等待」的「魔法注释」

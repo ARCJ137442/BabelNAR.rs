@@ -211,7 +211,7 @@ impl Iterator for PathWalkerV1<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cmdline_support::cin_search::name_match::is_name_match;
+    use crate::cli_support::cin_search::name_match::is_name_match;
     use std::env::current_dir;
 
     fn _test_path_walker_v1(start: impl Into<PathBuf>) {

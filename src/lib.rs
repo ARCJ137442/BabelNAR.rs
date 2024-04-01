@@ -24,7 +24,7 @@ util::mods! {
     "cin_implements" => pub cin_implements;
 
     // 命令行支持
-    "cmdline_support" => pub cmdline_support;
+    "cli_support" => pub cli_support;
 
     // 测试工具集
     "test_tools" => pub test_tools;
