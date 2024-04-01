@@ -27,7 +27,7 @@ mod tests {
         // 从别的地方获取exe路径
         let exe_path = EXE_PATH_ONA;
         // 一行代码启动ONA
-        ONA::new(exe_path).launch()
+        ONA::new(exe_path).launch().expect("无法启动虚拟机")
     }
 
     #[test]

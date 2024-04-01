@@ -1,0 +1,9 @@
+{
+    "translators": "ona",
+    "command": {
+        "cmd": "H:/A137442/Develop/AGI/NARS/NARS-executables/NAR.exe",
+        "cmd_args": [
+            "shell"
+        ]
+    }
+}

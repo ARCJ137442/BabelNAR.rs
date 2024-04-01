@@ -8,6 +8,7 @@ use crate::{
     cin_implements::common::{generate_command, generate_command_vm},
     runtimes::CommandVmRuntime,
 };
+use anyhow::Result;
 use navm::{
     cmd::Cmd,
     vm::{VmLauncher, VmRuntime},
@@ -50,17 +51,17 @@ impl ONA {
 
 /// 启动到「命令行运行时」
 impl VmLauncher<CommandVmRuntime> for ONA {
-    fn launch(self) -> CommandVmRuntime {
+    fn launch(self) -> Result<CommandVmRuntime> {
         // 构造并启动虚拟机
         let mut runtime = pipe! {
             self.exe_path
             // 构造指令 | 预置的指令参数
-            => generate_command(_, None::<String>, &COMMAND_ARGS_ONA)
+            => generate_command(_, None::<String>, COMMAND_ARGS_ONA.into_iter().by_ref())
             // * 🚩固定的「输入输出转换器」
             => generate_command_vm(_, (input_translate, output_translate))
             // 🔥启动
             => .launch()
-        };
+        }?;
 
         // 选择性设置初始音量
         if let Some(volume) = self.initial_volume {
@@ -69,7 +70,7 @@ impl VmLauncher<CommandVmRuntime> for ONA {
                 println!("无法设置初始音量「{volume}」：{e}");
             }
         };
-        runtime
+        Ok(runtime)
     }
 }
 

@@ -90,15 +90,11 @@ impl IoProcess {
 
     /// 启动
     /// * 🚩通过[`Self::try_launch`]尝试启动，然后直接解包
-    ///
-    /// # Panics
-    /// * 📌如果子进程创建失败，将直接 panic
-    pub fn launch(self) -> IoProcessManager {
-        self
-            // 尝试启动
-            .try_launch()
-            //解包
-            .expect("无法启动子进程")
+    /// * 🚩【2024-04-02 04:11:27】现在为方便反馈处理错误，重新变为[`Result`]类型
+    ///   * 📄路径问题：启动路径不合法 等
+    pub fn launch(self) -> Result<IoProcessManager> {
+        // 尝试启动
+        Ok(self.try_launch()?)
     }
 
     /// 启动
@@ -519,7 +515,7 @@ pub(crate) mod tests {
                 print!("[OUT] {}", output);
             });
         // 启动子进程并返回
-        (process.launch(), outputs)
+        (process.launch().expect("ONA启动失败"), outputs)
     }
 
     /// 标准案例：ONA交互

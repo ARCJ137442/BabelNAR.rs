@@ -28,7 +28,7 @@ mod tests {
         // 从别的地方获取jl路径
         let jl_path = JL_PATH_OPEN_JUNARS;
         // 一行代码启动OpenJunars
-        let vm = OpenJunars::new(jl_path).launch();
+        let vm = OpenJunars::new(jl_path).launch().expect("无法启动虚拟机");
         // 运行专有测试
         // ! ❌【2024-03-25 13:56:21】目前无法截取到Julia运行时输出，弃用
         // _test_opennars(vm)

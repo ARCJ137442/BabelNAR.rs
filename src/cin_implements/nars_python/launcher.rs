@@ -5,6 +5,7 @@
 
 use super::{input_translate, output_translate};
 use crate::runtimes::{CommandVm, CommandVmRuntime};
+use anyhow::Result;
 use navm::vm::VmLauncher;
 use std::path::PathBuf;
 
@@ -34,7 +35,7 @@ impl NARSPython {
 
 /// 启动到「命令行运行时」
 impl VmLauncher<CommandVmRuntime> for NARSPython {
-    fn launch(self) -> CommandVmRuntime {
+    fn launch(self) -> Result<CommandVmRuntime> {
         // 构造指令，并启动虚拟机
         CommandVm::new(self.exe_path)
             // * 🚩固定的「输入输出转换器」

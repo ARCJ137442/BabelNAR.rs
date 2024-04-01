@@ -30,7 +30,9 @@ mod tests {
         let root_path = MODULE_ROOT_PYNARS;
         let module_path = MODULE_PATH_PYNARS;
         // 一行代码启动PyNARS | `python -m pynars.Console` @ "..\..\PyNARS-dev"
-        PyNARS::new(root_path, module_path).launch()
+        PyNARS::new(root_path, module_path)
+            .launch()
+            .expect("无法启动虚拟机")
     }
 
     /// 测试/先前PyNARS测试

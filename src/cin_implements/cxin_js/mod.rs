@@ -29,11 +29,12 @@ mod tests {
     const CXIN_NARS_JS_PATH: &str = r"..\cxin-nars-py-to-ts\src\cxin-nars-shell.js";
 
     /// 通用/启动VM
+    /// * 🚩【2024-04-02 04:16:04】测试用代码无需返回[`Result`]
     fn launch_vm() -> CommandVmRuntime {
         // 从别的地方获取js路径
         let js_path = CXIN_NARS_JS_PATH;
         // 一行代码启动CxinNARS
-        CXinJS::new(js_path).launch()
+        CXinJS::new(js_path).launch().expect("无法启动虚拟机")
     }
 
     /// 测试/专用

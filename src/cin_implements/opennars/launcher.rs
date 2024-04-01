@@ -9,6 +9,7 @@ use crate::{
     cin_implements::common::CommandGeneratorJava,
     runtimes::{CommandGenerator, CommandVm, CommandVmRuntime},
 };
+use anyhow::Result;
 use navm::{
     cmd::Cmd,
     vm::{VmLauncher, VmRuntime},
@@ -42,7 +43,7 @@ impl OpenNARS {
 
 /// 启动到「命令行运行时」
 impl VmLauncher<CommandVmRuntime> for OpenNARS {
-    fn launch(self) -> CommandVmRuntime {
+    fn launch(self) -> Result<CommandVmRuntime> {
         // 构造指令
         // * 🚩细致的Java参数配置，都外包给[`CommandGeneratorJava`]
         let command_java = self.command_generator.generate_command();
@@ -53,7 +54,7 @@ impl VmLauncher<CommandVmRuntime> for OpenNARS {
             .input_translator(input_translate)
             .output_translator(output_translate)
             // 🔥启动
-            .launch();
+            .launch()?;
 
         // 设置初始音量
         if let Some(volume) = self.initial_volume {
@@ -64,7 +65,7 @@ impl VmLauncher<CommandVmRuntime> for OpenNARS {
         };
 
         // 返回
-        vm
+        Ok(vm)
     }
 }
 

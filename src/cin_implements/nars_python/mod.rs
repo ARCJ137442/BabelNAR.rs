@@ -28,7 +28,7 @@ mod tests {
         // 从别的地方获取exe路径
         let exe_path = EXE_PATH_NARS_PYTHON;
         // 一行代码启动NARS-Python
-        let vm = NARSPython::new(exe_path).launch();
+        let vm = NARSPython::new(exe_path).launch().expect("无法启动虚拟机");
         // 运行专有测试
         _test_nars_python(vm)
     }

@@ -154,6 +154,18 @@ impl LaunchConfig {
         serde_json::from_str(json)
     }
 
+    /// 判断其自身是否需要用户填充
+    /// * 🎯用于在「启动NAVM运行时」时避免「参数无效」情况
+    /// * 🚩判断「启动时必要项」是否为空
+    pub fn need_polyfill(&self) -> bool {
+        // 启动命令非空
+        self.command.is_none() ||
+        // 输入输出转译器非空
+        self.translators.is_none()
+        // ! Websocket为空⇒不启动Websocket服务器
+        // ! 预加载NAL为空⇒不预加载NAL
+    }
+
     /// 从另一个配置中并入配置
     /// * 🚩合并逻辑：`Some(..)` => `None`
     ///   * 当并入者为`Some`，自身为`None`时，合并`Some`中的值
@@ -180,6 +192,8 @@ impl LaunchConfigCommand {
     /// * 🚩`Some(..)` => `None`
     /// * 适用于自身为[`Option`]的情况
     pub fn merge_as_key(option: &mut Option<Self>, other: &Option<Self>) {
+        // 先处理「自身为`None`」的情况
+        option.coalesce_clone(other);
         // 双重`inspect`
         if let (Some(config_self), Some(config_other)) = (option, other) {
             config_self.merge_from(config_other);

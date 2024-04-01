@@ -13,13 +13,16 @@ use std::{ffi::OsStr, path::Path, process::Command};
 ///   * exe路径（可能不直接是可执行文件的路径）
 ///   * 当前文件夹（设置命令启动时的工作目录）
 ///   * 命令行参数（可以为空）
-pub fn generate_command(
-    exe_path: impl AsRef<OsStr>,
+pub fn generate_command<S>(
+    exe_path: impl AsRef<Path>,
     current_dir: Option<impl AsRef<Path>>,
-    args: &[&str],
-) -> Command {
+    args: impl Iterator<Item = S>,
+) -> Command
+where
+    S: AsRef<OsStr>,
+{
     // 构造指令
-    let mut command = Command::new(exe_path);
+    let mut command = Command::new(exe_path.as_ref());
 
     // 设置路径
     if let Some(current_dir) = current_dir {

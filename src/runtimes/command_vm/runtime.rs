@@ -63,10 +63,10 @@ impl VmRuntime for CommandVmRuntime {
 
 /// 构建功能：启动命令行虚拟机
 impl VmLauncher<CommandVmRuntime> for CommandVm {
-    fn launch(self) -> CommandVmRuntime {
-        CommandVmRuntime {
+    fn launch(self) -> Result<CommandVmRuntime> {
+        Ok(CommandVmRuntime {
             // 启动内部的「进程管理者」
-            process: self.io_process.launch(),
+            process: self.io_process.launch()?,
             // 输入转译器
             input_translator: self
                 .input_translator
@@ -78,7 +78,7 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
                 // 默认值：直接归入「其它」输出 | 约等于不分类
                 .unwrap_or(Box::new(|content| Ok(Output::OTHER { content }))),
             // * 🚩【2024-03-24 02:06:59】目前到此为止：只需处理「转译」问题
-        }
+        })
     }
 }
 
@@ -377,7 +377,8 @@ pub mod tests {
             // 输出转译器
             .output_translator(output_translate)
             // 🔥启动
-            .launch();
+            .launch()
+            .expect("无法启动虚拟机");
         _test_opennars(vm);
     }
 
@@ -410,7 +411,8 @@ pub mod tests {
             // 输入转译器：直接取其尾部
             .input_translator(|cmd| Ok(cmd.tail()))
             // 🔥启动
-            .launch();
+            .launch()
+            .expect("无法启动虚拟机");
         // 可复用的测试逻辑
         _test_pynars(vm);
     }

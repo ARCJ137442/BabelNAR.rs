@@ -44,7 +44,7 @@ fn main() {
 
 /// 开始
 fn start() {
-    let nars = get_nars().launch();
+    let nars = get_nars().launch().expect("无法启动虚拟机");
     shell(nars);
 }
 

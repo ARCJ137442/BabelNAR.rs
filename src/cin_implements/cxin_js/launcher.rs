@@ -8,6 +8,7 @@ use crate::{
     cin_implements::common::{generate_command_vm, CommandGeneratorNodeJS},
     runtimes::{CommandGenerator, CommandVmRuntime},
 };
+use anyhow::Result;
 use navm::vm::VmLauncher;
 use std::path::PathBuf;
 use util::pipe;
@@ -39,9 +40,9 @@ impl CXinJS {
 
 /// 启动到「命令行运行时」
 impl VmLauncher<CommandVmRuntime> for CXinJS {
-    fn launch(self) -> CommandVmRuntime {
+    fn launch(self) -> Result<CommandVmRuntime> {
         // 构造并启动虚拟机
-        let runtime = pipe! {
+        pipe! {
             self.command_generator
             // 构造指令 | 预置的指令参数
             => .generate_command()
@@ -49,9 +50,7 @@ impl VmLauncher<CommandVmRuntime> for CXinJS {
             => generate_command_vm(_, (input_translate, output_translate))
             // 🔥启动
             => .launch()
-        };
-
-        runtime
+        }
     }
 }
 

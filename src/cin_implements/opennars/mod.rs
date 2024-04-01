@@ -27,7 +27,7 @@ mod tests {
         // 从别的地方获取jar路径
         let jar_path = JAR_PATH_OPENNARS;
         // 一行代码启动OpenNARS
-        OpenNARS::new(jar_path).launch()
+        OpenNARS::new(jar_path).launch().expect("无法启动虚拟机")
     }
 
     #[test]

@@ -39,6 +39,16 @@ pub struct CliArgs {
     /// Disable the default configuration file in the same directory as exe
     #[arg(short, long)]
     pub disable_default: bool,
+
+    // 禁用用户输入
+    // * 禁用用户对程序的交互式输入
+    // * 📜默认为`false`
+    // * 📌行为
+    //   * 没有 ⇒ `false`
+    //   * 有　 ⇒ `true`
+    /// Disable the user's ability to interact with the program
+    #[arg(short, long)]
+    pub no_user_input: bool,
 }
 
 /// 加载配置
@@ -60,6 +70,11 @@ pub fn load_config(args: &CliArgs, default_config_path: impl Into<PathBuf>) -> L
         // * 🚩读取失败⇒警告&无动作 | 避免多次空合并
         load_config_extern(&default_config_path.into())
             .inspect(|config_extern| result.merge_from(config_extern));
+    }
+    // 展示加载的配置 | 以便调试（以防其它地方意外插入别的配置）
+    match serde_json::to_string(&result) {
+        Ok(json) => println!("[INFO] 加载的配置: {json}",),
+        Err(e) => println!("[WARN] 展示加载的配置时出现预期之外的错误: {e}"),
     }
     // 返回
     result
@@ -132,27 +147,31 @@ mod tests {
 
         // 快捷测试宏
         macro_rules! test_arg_parse {
-        // 成功测试
-        {
-            $( $args:expr => $expected:expr $(;)? )*
-        } => {
-            $(
-                _test_arg_parse(&$args, &$expected);
-            )*
-        };
-        // 失败测试
-        {
-            $args:expr
-        } => {
-            // 直接使用默认构造，解析成功了大概率报错
-            _test_arg_parse(&$args, &CliArgs::default())
-        };
-    }
+            // 成功测试
+            {
+                $( $args:expr => $expected:expr $(;)? )*
+            } => {
+                $(
+                    _test_arg_parse(&$args, &$expected);
+                )*
+            };
+            // 失败测试
+            {
+                $args:expr
+            } => {
+                // 直接使用默认构造，解析成功了大概率报错
+                _test_arg_parse(&$args, &CliArgs::default())
+            };
+        }
 
         /// 测试/打印帮助
         #[test]
         fn test_arg_parse_help() {
             _test_arg_parse(&["--help"], &CliArgs::default());
+        }
+        #[test]
+        fn test_arg_parse_help2() {
+            _test_arg_parse(&["-h"], &CliArgs::default());
         }
 
         /// 测试/成功的解析
@@ -190,9 +209,8 @@ mod tests {
 
     /// 测试/加载配置
     mod read_config {
-        use crate::LaunchConfigWebsocket;
-
         use super::*;
+        use crate::LaunchConfigWebsocket;
 
         /// 测试/加载配置
         fn load(args: &[&str]) -> LaunchConfig {

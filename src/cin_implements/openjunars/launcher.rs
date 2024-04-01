@@ -9,6 +9,7 @@ use crate::{
     cin_implements::common::CommandGeneratorJulia,
     runtimes::{CommandGenerator, CommandVm, CommandVmRuntime},
 };
+use anyhow::Result;
 use navm::vm::VmLauncher;
 use std::path::PathBuf;
 
@@ -36,7 +37,7 @@ impl OpenJunars {
 
 /// 启动到「命令行运行时」
 impl VmLauncher<CommandVmRuntime> for OpenJunars {
-    fn launch(self) -> CommandVmRuntime {
+    fn launch(self) -> Result<CommandVmRuntime> {
         // 构造指令
         let command = self.command_generator.generate_command();
 
