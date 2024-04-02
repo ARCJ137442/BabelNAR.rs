@@ -3,6 +3,7 @@
 
 use crate::launch_config::LaunchConfig;
 use anyhow::Result;
+use babel_nar::println_cli;
 use clap::Parser;
 use nar_dev_utils::{pipe, ResultBoost};
 use std::{fs::read_to_string, path::PathBuf};
@@ -39,16 +40,7 @@ pub struct CliArgs {
     /// Disable the default configuration file in the same directory as exe
     #[arg(short, long)]
     pub disable_default: bool,
-
-    // 禁用用户输入
-    // * 禁用用户对程序的交互式输入
-    // * 📜默认为`false`
-    // * 📌行为
-    //   * 没有 ⇒ `false`
-    //   * 有　 ⇒ `true`
-    /// Disable the user's ability to interact with the program
-    #[arg(short, long)]
-    pub no_user_input: bool,
+    // ! 🚩【2024-04-02 11:36:18】目前除了「配置加载」外，莫将任何「NAVM实现特定，可以内置到『虚拟机配置』的字段放这儿」
 }
 
 /// 加载配置
@@ -73,8 +65,8 @@ pub fn load_config(args: &CliArgs, default_config_path: impl Into<PathBuf>) -> L
     }
     // 展示加载的配置 | 以便调试（以防其它地方意外插入别的配置）
     match serde_json::to_string(&result) {
-        Ok(json) => println!("[INFO] 加载的配置: {json}",),
-        Err(e) => println!("[WARN] 展示加载的配置时出现预期之外的错误: {e}"),
+        Ok(json) => println_cli!([Log] "外部配置已加载：{json}",),
+        Err(e) => println_cli!([Warn] "展示加载的配置时出现预期之外的错误: {e}"),
     }
     // 返回
     result
@@ -90,19 +82,19 @@ pub fn load_config_extern(path: &PathBuf) -> Option<LaunchConfig> {
         if let Some(e) = e.downcast_ref::<std::io::Error>() {
             match e.kind() {
                 std::io::ErrorKind::NotFound => {
-                    println!("[WARN] 未找到外部配置，使用空配置……");
+                    println_cli!([Warn] "未找到外部配置，使用空配置……");
                 }
-                _ => println!("[WARN] 读取外部配置时出现预期之外的错误: {}", e),
+                _ => println_cli!([Warn] "读取外部配置时出现预期之外的错误: {}", e),
             }
         } else if let Some(e) = e.downcast_ref::<serde_json::Error>() {
             match e.classify() {
                 serde_json::error::Category::Syntax => {
-                    println!("[WARN] 外部配置文件格式错误，使用空配置……");
+                    println_cli!([Warn] "外部配置文件格式错误，使用空配置……");
                 }
-                _ => println!("[WARN] 解析外部配置时出现预期之外的错误: {}", e),
+                _ => println_cli!([Warn] "解析外部配置时出现预期之外的错误: {}", e),
             }
         } else {
-            println!("[WARN] 加载外部配置时出现预期之外的错误: {}", e)
+            println_cli!([Warn] "加载外部配置时出现预期之外的错误: {}", e)
         }
         // 空置
     })
@@ -178,9 +170,9 @@ mod tests {
         #[test]
         fn test_arg_parse() {
             test_arg_parse! {
-                ["-c", "./src/tests/cli/config_opennars.json"]
+                ["-c", "./src/tests/cli/config/opennars.json"]
                 => CliArgs {
-                    config: vec!["./src/tests/cli/config_opennars.json".into()],
+                    config: vec!["./src/tests/cli/config/opennars.json".into()],
                     ..Default::default()
                 };
                 // 多个配置：重复使用`-c`/`--config`，按使用顺序填充
@@ -238,7 +230,7 @@ mod tests {
             // 成功测试
             test! {
                 // 单个配置文件
-                ["-c" "src/tests/cli/config_opennars.json" "-d"] => LaunchConfig {
+                ["-c" "src/tests/cli/config/opennars.json" "-d"] => LaunchConfig {
                     translators: Some(
                         crate::LaunchConfigTranslators::Same(
                             "opennars".into(),
@@ -247,8 +239,9 @@ mod tests {
                     command: None,
                     websocket: None,
                     prelude_nal: None,
+                    ..Default::default()
                 };
-                ["-c" "src/tests/cli/config_websocket.json" "-d"] => LaunchConfig {
+                ["-c" "src/tests/cli/config/websocket.json" "-d"] => LaunchConfig {
                     translators: None,
                     command: None,
                     websocket: Some(LaunchConfigWebsocket {
@@ -256,12 +249,13 @@ mod tests {
                         port: 8080,
                     }),
                     prelude_nal: None,
+                    ..Default::default()
                 };
                 // 两个配置文件合并
                 [
                     "-d"
-                    "-c" "src/tests/cli/config_opennars.json"
-                    "-c" "src/tests/cli/config_websocket.json"
+                    "-c" "src/tests/cli/config/opennars.json"
+                    "-c" "src/tests/cli/config/websocket.json"
                 ] => LaunchConfig {
                     translators: Some(
                         crate::LaunchConfigTranslators::Same(
@@ -274,6 +268,7 @@ mod tests {
                         port: 8080,
                     }),
                     prelude_nal: None,
+                    ..Default::default()
                 }
             }
         }

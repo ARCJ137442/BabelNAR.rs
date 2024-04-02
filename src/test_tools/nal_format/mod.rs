@@ -27,7 +27,8 @@ pub fn parse(input: &str) -> Vec<Result<NALInput>> {
     input
         // 切分并过滤空行
         .split('\n')
-        .filter(|line| !line.trim().is_empty())
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
         // 逐行解析
         .map(parse_single)
         // 收集所有结果
@@ -57,11 +58,13 @@ pub fn parse_single(line: &str) -> Result<NALInput> {
 ///   * `narsese`：`NSE`语法糖，亦兼容原`.nal`格式
 ///   * `comment`：各类或「魔法」或「非魔法」的注释
 fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
+    // * 🚩【2024-04-02 18:33:05】此处不用再`trim`了：入口`parse`已经做过
+    let pair_str = pair.as_str();
     match pair.as_rule() {
         // 一行的无符号整数 //
         Rule::cyc_uint => {
             // 仅取数字部分
-            let n: usize = pair.as_str().parse()?;
+            let n: usize = pair_str.parse()?;
             // * 🚩作为`CYC`语法糖
             let input = NALInput::Put(Cmd::CYC(n));
             Ok(input)
@@ -70,7 +73,7 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
         Rule::narsese => {
             // 作为CommonNarsese，直接取字符串，然后调用CommonNarsese ASCII解析器
             // * 🚩【2024-03-31 16:37:32】虽可能有失灵活性，但代码上更显通用
-            let narsese = pair.as_str();
+            let narsese = pair_str;
             let narsese = FORMAT_ASCII.parse(narsese)?.try_into_task_compatible()?;
             // * 🚩作为`NSE`语法糖
             let input = NALInput::Put(Cmd::NSE(narsese));
@@ -81,7 +84,7 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
         Rule::comment_raw => {
             // 仅取注释部分
             // ! 不能用`to_string`：后者只会显示其总体信息，而非捕获相应字符串切片
-            let comment = pair.as_str().into();
+            let comment = pair_str.into();
             // * 🚩作为`REM`语法糖
             let input = NALInput::Put(Cmd::REM { comment });
             Ok(input)
@@ -91,7 +94,7 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
             // 取其中第一个`comment_raw`元素 | 一定只有唯一一个`comment_raw`
             let comment_raw = pair.into_inner().next().unwrap();
             // 仅取注释部分
-            let line = comment_raw.as_str();
+            let line = comment_raw.as_str().trim();
             // * 🚩作为所有NAVM指令的入口
             let input = NALInput::Put(Cmd::parse(line)?);
             Ok(input)
@@ -99,7 +102,7 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
         // 魔法注释/睡眠等待
         Rule::comment_sleep => {
             // 取其中第一个`comment_raw`元素 | 一定只有唯一一个`comment_raw`
-            let duration_raw = pair.into_inner().next().unwrap().as_str();
+            let duration_raw = pair.into_inner().next().unwrap().as_str().trim();
             // 尝试解析时间
             let duration = first! {
                 // 毫秒→微秒→纳秒→秒 | 对于「秒」分「整数」「浮点」两种

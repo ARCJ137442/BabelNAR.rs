@@ -2,3 +2,6 @@
 
 # 可执行文件
 executables/
+
+# 临时文件
+*tempCodeRunnerFile*

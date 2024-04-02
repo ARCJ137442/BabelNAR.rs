@@ -1,19 +1,20 @@
 {
-    "translators": "opennars",
+    "description": "测试「默认加载」逻辑",
+    "translators": "默认",
     "command": {
-        "cmd": "java",
-        "cmd_args": [
-            "-Xmx1024m",
-            "-jar",
-            "nars.jar"
+        "cmd": "默认",
+        "cmdArgs": [
+            "-默认",
+            "-默认",
+            "默认"
         ],
-        "current_dir": "root/nars/test"
+        "currentDir": "默认"
     },
     "websocket": {
-        "host": "localhost",
-        "port": 8080
+        "host": "默认",
+        "port": 8848
     },
-    "prelude_nal": {
-        "text": "'/VOL 0"
+    "preludeNAL": {
+        "text": "'默认"
     }
 }

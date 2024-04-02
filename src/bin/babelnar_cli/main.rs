@@ -7,6 +7,7 @@
 //! usage: BabelNAR [OPTIONS] <INPUT>
 //! ```
 
+use babel_nar::println_cli;
 use clap::Parser;
 use std::io::Result as IoResult;
 use std::thread::sleep;
@@ -39,24 +40,24 @@ pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) {
     let mut config = load_config(&args, DEFAULT_CONFIG_PATH);
     // 用户填充配置项
     polyfill_config_from_user(&mut config);
-    // 从配置项启动
-    let runtime = match launch_by_config(config) {
+    // 从配置项启动 | 复制一个新配置，不会附带任何非基础类型开销
+    let runtime = match launch_by_config(config.clone()) {
         // 启动成功⇒返回
         Ok(runtime) => runtime,
         // 启动失败⇒打印错误信息，等待并退出
         Err(e) => {
-            println!("NARS运行时启动错误：{e}");
-            println!("程序将在 3 秒后自动退出。。。");
+            println_cli!([Error] "NARS运行时启动错误：{e}");
+            println_cli!([Info] "程序将在 3 秒后自动退出。。。");
             sleep(Duration::from_secs(3));
             return;
         }
     };
     // 运行时交互、管理
-    if let Err(e) = manage(runtime, &args) {
-        println!("运行时发生错误：{e}");
-    }
+    let manager = RuntimeManager::new(runtime, config.clone());
+    loop_manage(manager, &config);
+
     // 最终退出
-    println!("程序将在 5 秒后退出");
+    println_cli!([Info] "程序将在 5 秒后退出");
     sleep(Duration::from_secs(5));
 }
 
@@ -64,10 +65,14 @@ pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nar_dev_utils::if_return;
 
     /// 测试入口
     #[test]
     pub fn main_ona() {
+        // ! 此处需要测试用路径
+        const PATH_ONA_EXE: &str = "../../NARS-executables/NAR.exe";
+        if_return! { !PathBuf::from(PATH_ONA_EXE).exists() }
         // 以默认参数启动
         main_args(
             env::current_dir(),
@@ -75,7 +80,7 @@ mod tests {
                 "test.exe",
                 "-d",
                 "-c",
-                "./src/tests/cli/config_test_ona.json",
+                "./src/tests/cli/config/test_ona.json",
             ]
             .into_iter()
             .map(str::to_string),

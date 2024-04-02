@@ -6,11 +6,15 @@
 //!   * 📌可根据「匹配度」排名
 //! * ✨自动启动并管理CIN
 //!   * 📌可保存/加载「常用CIN」配置
+//! 
+//! * 🚩目前用于敏捷原型开发
 //! TODO: 完成代码
 #![allow(unused)]
 
+use anyhow::Result;
 use babel_nar::{
     cin_implements::{ona::ONA, opennars::OpenNARS, pynars::PyNARS},
+    eprintln_cli, println_cli,
     runtimes::CommandVmRuntime,
 };
 use nar_dev_utils::*;
@@ -25,16 +29,21 @@ const TEST_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modifie
 const TEST_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
 const TEST_PATH_PYNARS: (&str, &str) = ("..\\..\\PyNARS-dev", "pynars.ConsolePlus");
 
-/// 启动NARS
+/// 启动并获取NARS
 /// * 🚩【2024-03-27 18:55:07】目前就返回一个测试用的运行时
+/// * 🎯敏捷开发用
 fn get_nars() -> impl VmLauncher<CommandVmRuntime> {
     // OpenNARS::new(TEST_PATH_OPENNARS)
     PyNARS::new(TEST_PATH_PYNARS.0, TEST_PATH_PYNARS.1)
     // ONA::new(TEST_PATH_ONA)
 }
 
+fn put_cmd_to_nars(nars: &mut impl VmRuntime, cmd: Cmd) -> Result<()> {
+    nars.input_cmd(cmd)
+}
+
 /// 主函数
-/// TODO: 完成代码
+/// * 🚩【2024-04-02 20:58:07】现在更完整的支持交给BabelNAR CLI，此文件用于敏捷开发
 fn main() {
     // 不断开始🔥
     loop {
@@ -58,22 +67,29 @@ fn shell(mut nars: CommandVmRuntime) {
     let stdin = stdin();
     let mut input = String::new();
     let mut line;
+
     'main: while stdin.read_line(&mut input).is_ok() {
         // 一行
         line = input.as_str();
 
         // 非空⇒解析出NAVM指令，作为输入执行
         if !line.trim().is_empty() {
-            if let Ok(cmd) = Cmd::parse(line).inspect_err(println_error) {
-                let _ = nars.input_cmd(cmd).inspect_err(println_error);
+            if let Ok(cmd) = Cmd::parse(line)
+                .inspect_err(|e| eprintln_cli!([Error] "解析NAVM指令时发生错误：{e}"))
+            {
+                let _ = put_cmd_to_nars(&mut nars, cmd)
+                    .inspect_err(|e| eprintln_cli!([Error] "执行NAVM指令时发生错误：{e}"));
             }
         }
 
         // 尝试拉取所有NAVM运行时输出
-        while let Ok(Some(output)) = nars.try_fetch_output().inspect_err(println_error) {
+        while let Ok(Some(output)) = nars
+            .try_fetch_output()
+            .inspect_err(|e| eprintln_cli!([Error] "拉取NAVM运行时输出时发生错误：{e}"))
+        {
             println!("{output:?}");
-            if let Output::TERMINATED { .. } = output {
-                println!("NAVM已终止运行，正在重启。。。");
+            if let Output::TERMINATED { description } = output {
+                println_cli!([Info] "NAVM已终止运行：{description}");
                 nars.terminate();
                 break 'main; // ! 这个告诉Rust编译器，循环必将在此结束
             }

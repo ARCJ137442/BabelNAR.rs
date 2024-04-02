@@ -54,7 +54,7 @@ impl VmRuntime for CommandVmRuntime {
         }
     }
 
-    fn terminate(self) -> Result<()> {
+    fn terminate(&mut self) -> Result<()> {
         // 杀死子进程
         self.process.kill()?;
         Ok(())

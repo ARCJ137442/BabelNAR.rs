@@ -1,4 +1,5 @@
 {
+    "description": "用于测试可作补丁的Websocket配置",
     "websocket": {
         "host": "localhost",
         "port": 8080

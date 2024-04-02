@@ -28,38 +28,51 @@
 //!
 //! ```ts
 //! type LaunchConfig = {
-//!     translators?: LaunchConfigTranslators;
-//!     command?: LaunchConfigCommand;
-//!     websocket?: LaunchConfigWebsocket;
-//!     prelude_nal?: LaunchConfigPreludeNAL;
+//!     translators?: LaunchConfigTranslators,
+//!     command?: LaunchConfigCommand,
+//!     websocket?: LaunchConfigWebsocket,
+//!     preludeNAL?: LaunchConfigPreludeNAL,
+//!     userInput?: boolean
+//!     inputMode?: InputMode
+//!     autoRestart?: boolean
 //! }
+//!
+//! type InputMode = 'cmd' | 'nal'
 //!
 //! type LaunchConfigTranslators = string | {
 //!     // ↓虽然`in`是JavaScript/TypeScript/Rust的关键字，但仍可在此直接使用
-//!     in: string;
-//!     out: string;
-//! };
+//!     in: string,
+//!     out: string,
+//! }
 //!
 //! type LaunchConfigCommand = {
-//!     cmd: string;
-//!     cmd_args?: string[];
-//!     current_dir?: string;
+//!     cmd: string,
+//!     cmdArgs?: string[],
+//!     currentDir?: string,
 //! }
 //! type LaunchConfigWebsocket = {
-//!     host: string;
-//!     port: number;
+//!     host: string,
+//!     port: number, // Uint16
 //! }
 //! // ↓ 文件、纯文本 二选一
 //! type LaunchConfigPreludeNAL = {
-//!     file?: string;
-//!     text?: string;
+//!     file?: string,
+//!     text?: string,
 //! }
 //! ```
+
+use std::path::PathBuf;
 
 use nar_dev_utils::OptionBoost;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// NAVM虚拟机（运行时）启动配置
+/// * 🎯启动完整的NAVM实例，并附带相关运行时配置
+///   * ✨启动时数据提供
+///   * ✨运行时数据提供
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LaunchConfig {
     /// 转译器组合（可选）
     /// * 🚩使用字符串模糊匹配
@@ -72,14 +85,92 @@ pub struct LaunchConfig {
     pub websocket: Option<LaunchConfigWebsocket>,
 
     /// 预置NAL（可选）
+    #[serde(rename = "preludeNAL")] // * 📝serde配置中，`rename`优先于`rename_all`
     pub prelude_nal: Option<LaunchConfigPreludeNAL>,
+
+    /// 启用用户输入（可选）
+    /// * 🎯控制该实例是否需要（来自用户的）交互式输入
+    /// * 📜默认值：`true`
+    /// * 📝serde中，若不使用`bool::default`(false)，需要指定一个函数来初始化
+    ///   * ⚠️即便在[`LaunchConfig`]中定义了[`default`]，也会使用[`bool::default`]
+    #[serde(default = "bool_true")]
+    pub user_input: bool,
+
+    /// 输入模式
+    /// * 🚩对输入（不论交互还是Websocket）采用的解析模式
+    ///   * 📄用于纯NAVM指令（可选）的解析
+    /// * 🎯用于兼容旧`BabelNAR.jl`服务端
+    /// * 📜默认为`"nal"`
+    /// Disable the user's ability to interact with the program
+    #[serde(default)]
+    pub input_mode: InputMode,
+
+    /// 自动重启
+    /// * 🚩在虚拟机终止（收到「终止」输出）时，自动用配置重启虚拟机
+    /// * 📜默认为`false`（关闭）
+    #[serde(default = "bool_false")]
+    pub auto_restart: bool,
+}
+
+/// 布尔值`true`
+/// * 🎯配置解析中「默认为`true`」的默认值指定
+/// * 📝serde中，`#[serde(default)]`使用的是[`bool::default`]而非容器的`default`
+///   * 因此需要指定一个函数来初始化
+#[inline(always)]
+const fn bool_true() -> bool {
+    true
+}
+
+#[inline(always)]
+const fn bool_false() -> bool {
+    false
+}
+
+impl Default for LaunchConfig {
+    fn default() -> Self {
+        Self {
+            // [`Option`]全部为[`None`]
+            translators: None,
+            command: None,
+            websocket: None,
+            prelude_nal: None,
+            // 默认启用用户输入
+            user_input: true,
+            // 输入模式传递默认值
+            input_mode: InputMode::default(),
+            // 不自动重启
+            auto_restart: false,
+        }
+    }
+}
+
+/// NAVM实例的输入类型
+/// * 🎯处理用户输入、Websocket输入的解析方式
+/// * 📜默认值：`nal`
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+// #[serde(untagged)] // ! 🚩【2024-04-02 18:14:16】不启用方通过：本质上是几个字符串里选一个
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum InputMode {
+    /// （NAVM）指令
+    /// * 📄类型：[`navm::cmd::Cmd`]
+    #[serde(rename = "cmd")]
+    Cmd,
+    /// `.nal`输入
+    /// * 📜默认值
+    /// * 📄类型：[`babel_nar::test_tools::NALInput`]
+    #[serde(rename = "nal")]
+    #[default]
+    Nal,
 }
 
 /// 转译器组合
 /// * 🚩【2024-04-01 11:20:36】目前使用「字符串+内置模糊匹配」进行有限的「转译器支持」
 ///   * 🚧尚不支持自定义转译器
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(untagged)] // 🔗参考：<https://serde.rs/enum-representations.html#untagged>
+#[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LaunchConfigTranslators {
     /// 🚩单个字符串⇒输入输出使用同一个转译配置
     Same(String),
@@ -95,7 +186,9 @@ pub enum LaunchConfigTranslators {
 
 /// 启动命令
 /// * ❓后续可能支持「自动搜索」
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LaunchConfigCommand {
     /// 命令
     /// * 直接对应[`std::process::Command`]
@@ -111,7 +204,9 @@ pub struct LaunchConfigCommand {
 }
 
 /// Websocket参数
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LaunchConfigWebsocket {
     /// 主机地址
     /// * 📄`localhost`
@@ -129,14 +224,19 @@ pub struct LaunchConfigWebsocket {
 /// 预置NAL
 /// * 🚩在CLI启动后自动执行
 /// * 📝[`serde`]允许对枚举支持序列化/反序列化
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LaunchConfigPreludeNAL {
     /// 从文件路径导入
     /// * 📌键名：`file`
+    /// * 📌类型：路径
     #[serde(rename = "file")]
-    File(String),
+    File(PathBuf),
+
     /// 从文本解析
     /// * 📌键名：`text`
+    /// * 📌类型：纯文本（允许换行等）
     #[serde(rename = "text")]
     Text(String),
 }
@@ -167,6 +267,7 @@ impl LaunchConfig {
     }
 
     /// 从另一个配置中并入配置
+    /// * 📌优先级：`other` > `self`
     /// * 🚩合并逻辑：`Some(..)` => `None`
     ///   * 当并入者为`Some`，自身为`None`时，合并`Some`中的值
     /// * ✨对【内部含有可选键】的值，会**递归深入**
@@ -175,6 +276,10 @@ impl LaunchConfig {
         self.translators.coalesce_clone(&other.translators);
         self.prelude_nal.coalesce_clone(&other.prelude_nal);
         self.websocket.coalesce_clone(&other.websocket);
+        // ! 覆盖所有【必定有】的值 | 如：布尔值
+        self.user_input = other.user_input;
+        self.input_mode = other.input_mode;
+        self.auto_restart = other.auto_restart;
         // 递归合并所有【含有可选键】的值
         LaunchConfigCommand::merge_as_key(&mut self.command, &other.command);
     }
@@ -225,6 +330,7 @@ mod tests {
         Ok(())
     }
 
+    /// 主测试
     #[test]
     fn main() {
         test! {
@@ -237,14 +343,14 @@ mod tests {
                 "translators": "opennars",
                 "command": {
                     "cmd": "java",
-                    "cmd_args": ["-Xmx1024m", "-jar", "nars.jar"],
-                    "current_dir": "root/nars/test"
+                    "cmdArgs": ["-Xmx1024m", "-jar", "nars.jar"],
+                    "currentDir": "root/nars/test"
                 },
                 "websocket": {
                     "host": "localhost",
                     "port": 8080
                 },
-                "prelude_nal": {
+                "preludeNAL": {
                     "text": "'/VOL 0"
                 }
             }"# => LaunchConfig {
@@ -258,7 +364,8 @@ mod tests {
                     host: "localhost".into(),
                     port: 8080
                 }),
-                prelude_nal: Some(LaunchConfigPreludeNAL::Text("'/VOL 0".into()))
+                prelude_nal: Some(LaunchConfigPreludeNAL::Text("'/VOL 0".into())),
+                ..Default::default()
             }
             // 测试`translators`、`prelude_nal`的其它枚举
             r#"
@@ -270,7 +377,7 @@ mod tests {
                 "command": {
                     "cmd": "root/nars/open_ona.exe"
                 },
-                "prelude_nal": {
+                "preludeNAL": {
                     "file": "root/nars/prelude.nal"
                 }
             }"# => LaunchConfig {
@@ -283,6 +390,21 @@ mod tests {
                     ..Default::default()
                 }),
                 prelude_nal: Some(LaunchConfigPreludeNAL::File("root/nars/prelude.nal".into())),
+                ..Default::default()
+            }
+            r#"
+            {
+                "inputMode": "cmd"
+            }"# => LaunchConfig {
+                input_mode: InputMode::Cmd,
+                ..Default::default()
+            }
+            r#"{
+                "autoRestart": true,
+                "userInput": false
+            }"# => LaunchConfig {
+                auto_restart: true,
+                user_input: false,
                 ..Default::default()
             }
         }

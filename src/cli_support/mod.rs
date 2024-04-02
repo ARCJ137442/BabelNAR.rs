@@ -8,3 +8,6 @@ util::mods! {
     // 输入输出
     pub io;
 }
+
+// 错误处理增强
+pub mod error_handling_boost;

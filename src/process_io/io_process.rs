@@ -15,7 +15,7 @@ use std::{
     error::Error,
     ffi::OsStr,
     fmt::{self, Debug, Display, Formatter},
-    io::{BufRead, BufReader, Result as IoResult, Write},
+    io::{BufRead, BufReader, ErrorKind, Result as IoResult, Write},
     process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio},
     sync::{
         mpsc::{channel, Receiver, Sender},
@@ -141,18 +141,20 @@ impl From<Command> for IoProcess {
 /// * 🚩现在兼容「输出侦听」与「输出通道」两处
 ///   * 🎯「输出侦听」用于「需要**响应式**即时处理输出，但又不想阻塞主进程/开新进程」时
 ///   * 🎯「输出通道」用于「需要封装『并发异步获取』延迟处理输出，兼容已有异步并发模型」时
+/// * 📝【2024-04-02 20:40:35】使用[`Option`]应对「可能会移动所有权」的情形
+///   * 📄在「线程消耗」的场景中，有时需要「消耗线程，重启新线程」，此时就需要[`Option`]确保销毁
 #[allow(dead_code)]
 pub struct IoProcessManager {
     /// 正在管理的子进程
     process: Child,
 
     /// 子进程的「写（到子进程的）输入」守护线程
-    thread_write_in: JoinHandle<()>,
+    thread_write_in: Option<JoinHandle<()>>,
+
     /// 子进程的「读（到子进程的）输出」守护线程
     /// * 🚩现在兼容「侦听器」「通道」两种模式，重新必要化
-    // thread_read_out: Option<JoinHandle<()>>,
-    thread_read_out: JoinHandle<()>,
-
+    thread_read_out: Option<JoinHandle<()>>,
+    // thread_read_out: JoinHandle<()>,
     /// 子线程的终止信号
     termination_signal: ArcMutex<bool>,
 
@@ -198,15 +200,18 @@ impl IoProcessManager {
         // let num_output = Arc::new(Mutex::new(0));
 
         // 生成进程的「读写守护」（线程）
-        let thread_write_in =
-            IoProcessManager::spawn_thread_write_in(stdin, child_in, termination_signal.clone());
-        let thread_read_out = IoProcessManager::spawn_thread_read_out(
+        let thread_write_in = Some(IoProcessManager::spawn_thread_write_in(
+            stdin,
+            child_in,
+            termination_signal.clone(),
+        ));
+        let thread_read_out = Some(IoProcessManager::spawn_thread_read_out(
             stdout,
             child_out,
             out_listener,
             termination_signal.clone(),
             // num_output.clone(),
-        );
+        ));
         // let thread_read_out =
         // out_listener.map(|listener| IoProcessManager::spawn_thread_read_out(stdout, listener));
         // ! 🚩【2024-03-23 19:33:45】↑现在兼容「侦听器」「通道」二者
@@ -249,7 +254,16 @@ impl IoProcessManager {
                 }
                 // 写入输出
                 if let Err(e) = stdin.write_all(line.as_bytes()) {
-                    println!("无法向子进程输入：{e:?}");
+                    match e.kind() {
+                        // * 🚩进程已关闭⇒退出
+                        // TODO: 🏗️外包「错误处理」逻辑
+                        ErrorKind::BrokenPipe => {
+                            println!("子进程已关闭");
+                            break;
+                        }
+                        // 其它
+                        _ => println!("子进程写入错误：{e}"),
+                    }
                 }
             }
         })
@@ -422,10 +436,13 @@ impl IoProcessManager {
     /// 杀死自身
     /// * 🚩设置终止信号，通知子线程（以及标准IO）终止
     /// * 🚩调用[`Child::kill`]方法，终止子进程
-    /// * ⚠️将借走自身所有权，终止并销毁自身
+    /// * ~~⚠️将借走自身所有权，终止并销毁自身~~
+    /// * 🚩【2024-04-02 20:37:28】如今不再消耗自身所有权
+    ///   * ✅【2024-04-02 20:36:40】现在通过「将字段类型变为[`Option`]」安全借走子线程所有权
+    ///   * 📌销毁自身的逻辑，交给调用方处理
     ///
     /// * ❓不稳定：有时会导致「野进程」的情况
-    pub fn kill(mut self) -> Result<()> {
+    pub fn kill(&mut self) -> Result<()> {
         // ! ❌【2024-03-23 21:08:56】暂不独立其中的逻辑：无法脱开对`self`的借用
         // ! 📌更具体而言：对其中两个线程`thread_write_in`、`thread_read_out`的部分借用
         // 向子线程发送终止信号 //
@@ -442,8 +459,13 @@ impl IoProcessManager {
         //   * 📌主要原因：在测试OpenNARS时，发现`thread_read_out`仍然会阻塞（无法等待）
         //   * 📌并且一时难以修复：难点在`BufReader.read_line`如何非阻塞/可终止化
         // ! ℹ️信息 from Claude3：无法简单以此终止子线程
-        self.thread_write_in.join().transform_err(err)?; // * ✅目前这个是可以终止的
-        drop(self.thread_read_out);
+        // * 🚩【2024-04-02 20:31:24】现在通过「字段类型转为[`Option`]」的方法，安全拿取所有权并销毁
+        drop(
+            self.thread_write_in
+                .take()
+                .map(|t| t.join().transform_err(err)),
+        ); // * ✅目前这个是可以终止的
+        drop(self.thread_read_out.take());
 
         // * 📝此时子线程连同「子进程的标准输入输出」一同关闭，
         //   * 子进程自身可以做输出

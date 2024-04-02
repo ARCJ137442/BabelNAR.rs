@@ -87,7 +87,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             r#type: "ANTICIPATE".to_string(),
             // 先提取其中的Narsese | ⚠️借用了`content_raw`
             narsese: try_parse_narsese(tail)
-                .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")),
+                .ok_or_run(|e| println!("【{head}】在解析Narsese时出现错误：{e}")),
             // 然后传入整个内容
             content: content_raw,
         },
@@ -117,8 +117,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
 pub fn parse_narsese_opennars(head: &str, tail: &str) -> Result<Option<Narsese>> {
     use util::ResultBoost;
     // ! ↓下方会转换为None
-    Ok(try_parse_narsese(tail)
-        .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")))
+    Ok(try_parse_narsese(tail).ok_or_run(|e| println!("【{head}】在解析Narsese时出现错误：{e}")))
 }
 
 /// （ONA）从原始输出中解析Narsese
@@ -155,7 +154,7 @@ pub fn parse_operation_opennars(tail: &str) -> Operation {
             match parse_term_from_operation(param) {
                 Ok(term) => params.push(term),
                 // ? 【2024-03-27 22:29:43】↓是否要将其整合到一个日志系统中去
-                Err(e) => println!("【ERR/EXE】在解析Narsese时出现错误：{e}"),
+                Err(e) => println!("【EXE】在解析Narsese时出现错误：{e}"),
             }
         }
     } else {

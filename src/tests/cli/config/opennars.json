@@ -2,11 +2,11 @@
     "translators": "opennars",
     "command": {
         "cmd": "java",
-        "cmd_args": [
+        "cmdArgs": [
             "-Xmx1024m",
             "-jar",
             "nars.jar"
         ],
-        "current_dir": "root/nars/test"
+        "currentDir": "root/nars/test"
     }
 }

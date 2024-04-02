@@ -123,11 +123,11 @@ fn segment_narsese(head: &str, tail: &str) -> Option<Narsese> {
     match try_segment_narsese(tail) {
         Some(Ok(narsese)) => Some(narsese),
         Some(Err(e)) => {
-            println!("【ERR/{head}】在解析Narsese时出现错误：{e}");
+            println!("【{head}】在解析Narsese时出现错误：{e}");
             None
         }
         None => {
-            println!("【ERR/{head}】未匹配到输出中的Narsese块");
+            println!("【{head}】未匹配到输出中的Narsese块");
             None
         }
     }

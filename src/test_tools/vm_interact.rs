@@ -17,7 +17,7 @@ impl OutputExpectation {
 /// * 🚩通过「输出缓存」参数，解决「缓存输出」问题
 /// * ❓需要迁移「符合预期」的逻辑
 pub fn put_nal(
-    mut vm: impl VmRuntime,
+    vm: &mut impl VmRuntime,
     input: NALInput,
     output_cache: &mut Vec<Output>,
 ) -> Result<()> {

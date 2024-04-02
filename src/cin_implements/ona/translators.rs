@@ -149,7 +149,8 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             description: content_raw,
         },
         // * 🚩对于「操作」的特殊语法
-        _ if content_raw.contains("executed") => Output::EXE {
+        // * 🚩【2024-04-02 18:45:17】仅截取`executed with args`，不截取`executed by NAR`
+        _ if content_raw.contains("executed with args") => Output::EXE {
             operation: parse_operation_ona(&content_raw)?,
             content_raw,
         },
@@ -173,9 +174,10 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
 /// * 📄`^deactivate executed with args`
 /// * 📄`^left executed with args (* {SELF})`
 /// * 📄`^left executed with args ({SELF} * x)`
+/// * ❌`right executed by NAR`
 pub fn parse_operation_ona(content_raw: &str) -> Result<Operation> {
     // 匹配ONA输出中的「操作」⇒转换 | 操作名 | 操作参数（Narsese复合词项⇒提取组分，变成字符串）
-    let re_operation = Regex::new(r"\^([^\s]+)\s*executed with args\s*(.*)").unwrap();
+    let re_operation = Regex::new(r"\^([^\s]+)\s*executed with args\s*(.*)$").unwrap();
     let captures = re_capture(&re_operation, content_raw)?;
     // ! 即便是测试环境下，也有可能是[`None`]（但只在测试环境下返回[`Err`]并报错）
     match captures {
@@ -251,7 +253,7 @@ fn extract_params(params: Term) -> Vec<Term> {
 fn re_capture<'a>(re: &'a Regex, haystack: &'a str) -> Result<Option<Captures<'a>>> {
     Ok(re
         .captures(haystack)
-        .inspect_none(|| println!("【ERR】使用正则表达式「{re}」无法捕获「{haystack}」")))
+        .inspect_none(|| println!("使用正则表达式「{re}」无法捕获「{haystack}」")))
 }
 
 /// 正则捕获
@@ -264,9 +266,7 @@ fn re_capture<'a>(re: &'a Regex, haystack: &'a str) -> Result<Option<Captures<'a
     match re.captures(haystack) {
         // * 🚩↓因为这里要包一层[`Some`]，所以无法使用[`Option::ok_or`]
         Some(captures) => Ok(Some(captures)),
-        None => Err(anyhow!(
-            "【ERR】无法使用正则表达式「{re}」捕获「{haystack}」"
-        )),
+        None => Err(anyhow!("无法使用正则表达式「{re}」捕获「{haystack}」")),
     }
 }
 
@@ -277,8 +277,7 @@ fn re_capture<'a>(re: &'a Regex, haystack: &'a str) -> Result<Option<Captures<'a
 pub fn parse_narsese_ona(head: &str, tail: &str) -> Result<Option<Narsese>> {
     use util::ResultBoost;
     // ! ↓下方会转换为None
-    Ok(try_parse_narsese(tail)
-        .ok_or_run(|e| println!("【ERR/{head}】在解析Narsese时出现错误：{e}")))
+    Ok(try_parse_narsese(tail).ok_or_run(|e| println!("【{head}】在解析Narsese时出现错误：{e}")))
 }
 
 /// （ONA）从原始输出中解析Narsese
