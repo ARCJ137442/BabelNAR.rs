@@ -5,3 +5,6 @@ executables/
 
 # 临时文件
 *tempCodeRunnerFile*
+
+# 测试用文件
+\[test\]*

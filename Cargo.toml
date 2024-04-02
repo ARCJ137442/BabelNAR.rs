@@ -8,10 +8,9 @@ edition = "2021"
 ## 必要的依赖 ##
 
 [dependencies]
-
 # 用于错误处理
-[dependencies.anyhow]
-version = "1.0.81"
+thiserror = "1.0.58"
+anyhow = "1.0.81"
 
 [dependencies.nar_dev_utils]
 # 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`

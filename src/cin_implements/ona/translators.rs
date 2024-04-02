@@ -52,9 +52,11 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         Cmd::VOL(n) => format!("*volume={n}"),
         // REG指令：注册操作
         Cmd::REG { name } => format!("*setopname {} ^{name}", hash_operator_id(&name)),
+        // 注释 ⇒ 忽略 | ❓【2024-04-02 22:43:05】可能需要打印，但这样却没法统一IO（到处print的习惯不好）
+        Cmd::REM { .. } => String::new(),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
-        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
+        _ => return Err(TranslateError::UnsupportedInput(cmd).into()),
     };
     // 转译
     Ok(content)
@@ -177,8 +179,8 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
 /// * ❌`right executed by NAR`
 pub fn parse_operation_ona(content_raw: &str) -> Result<Operation> {
     // 匹配ONA输出中的「操作」⇒转换 | 操作名 | 操作参数（Narsese复合词项⇒提取组分，变成字符串）
-    let re_operation = Regex::new(r"\^([^\s]+)\s*executed with args\s*(.*)$").unwrap();
-    let captures = re_capture(&re_operation, content_raw)?;
+    let re_operation = Regex::new(r"\^([^\s]+)\s*executed with args\s*(.*)").unwrap();
+    let captures = re_capture(&re_operation, content_raw.trim())?;
     // ! 即便是测试环境下，也有可能是[`None`]（但只在测试环境下返回[`Err`]并报错）
     match captures {
         Some(captures) => {

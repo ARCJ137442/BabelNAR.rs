@@ -30,9 +30,11 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         // CYC指令：运行指定周期数
         // ! NARS-Python同样是自动步进的
         Cmd::CYC(n) => n.to_string(),
+        // 注释 ⇒ 忽略 | ❓【2024-04-02 22:43:05】可能需要打印，但这样却没法统一IO（到处print的习惯不好）
+        Cmd::REM { .. } => String::new(),
         // 其它类型
         // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
-        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
+        _ => return Err(TranslateError::UnsupportedInput(cmd).into()),
     };
     // 转译
     Ok(content)

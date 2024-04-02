@@ -39,10 +39,12 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         Cmd::CYC(n) => n.to_string(),
         // VOL指令：调整音量
         Cmd::VOL(n) => format!("*volume={n}"),
+        // 注释 ⇒ 忽略 | ❓【2024-04-02 22:43:05】可能需要打印，但这样却没法统一IO（到处print的习惯不好）
+        Cmd::REM { .. } => String::new(),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
         // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
-        _ => return Err(TranslateError(format!("该指令类型暂不支持：{cmd:?}")).into()),
+        _ => return Err(TranslateError::UnsupportedInput(cmd).into()),
     };
     // 转译
     Ok(content)
@@ -191,7 +193,7 @@ fn try_parse_narsese(tail: &str) -> Result<Narsese> {
         // 解析成功⇒提取 & 返回
         Some(Ok(narsese)) => Ok(narsese),
         // 解析失败⇒打印错误日志 | 返回None
-        Some(Err(err)) => Err(TranslateError(format!("输出「OUT」解析失败：{err}")).into()),
+        Some(Err(err)) => Err(TranslateError::from(err).into()),
         // 未找到括号的情况
         None => Err(TranslateError::from("输出「OUT」解析失败：未找到「{」").into()),
     }

@@ -8,11 +8,12 @@
 
 use super::{CommandVm, InputTranslator, OutputTranslator};
 use crate::process_io::IoProcessManager;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use nar_dev_utils::if_return;
 use navm::{
     cmd::Cmd,
     output::Output,
-    vm::{VmLauncher, VmRuntime},
+    vm::{VmLauncher, VmRuntime, VmStatus},
 };
 
 /// 命令行虚拟机运行时
@@ -28,14 +29,22 @@ pub struct CommandVmRuntime {
     /// 进程输出→[`Output`]转译器
     /// * 🚩【2024-03-24 02:06:27】至于「输出侦听」等后续处理，外置给其它专用「处理者」
     output_translator: Box<OutputTranslator>,
+
+    /// 用于指示的「状态」变量
+    status: VmStatus,
 }
 
 impl VmRuntime for CommandVmRuntime {
     fn input_cmd(&mut self, cmd: Cmd) -> Result<()> {
         // 尝试转译
         let input = (self.input_translator)(cmd)?;
-        // 置入转译结果
-        self.process.put_line(input)
+        // 当输入非空时，置入转译结果
+        // * 🚩【2024-04-03 02:20:48】目前用「空字串」作为「空输入」的情形
+        // TODO: 后续或将让「转译器」返回`Option<String>`
+        // 空⇒提前返回
+        if_return! { input.is_empty() => Ok(()) }
+        // 置入
+        self.process.put(input)
     }
 
     fn fetch_output(&mut self) -> Result<Output> {
@@ -48,15 +57,35 @@ impl VmRuntime for CommandVmRuntime {
         // 匹配分支
         match s {
             // 有输出⇒尝试转译并返回
-            Some(s) => Ok(Some((self.output_translator)(s)?)),
+            Some(s) => Ok(Some({
+                // 转译输出
+                let output = (self.output_translator)(s)?;
+                // * 当输出为「TERMINATED」时，将自身终止状态置为「TERMINATED」
+                if let Output::TERMINATED { description } = &output {
+                    // ! 🚩【2024-04-02 21:39:56】目前将所有「终止」视作「意外终止」⇒返回`Err`
+                    self.status = VmStatus::Terminated(Err(anyhow!(description.clone())));
+                }
+                // 传出输出
+                output
+            })),
             // 没输出⇒没输出 | ⚠️注意：不能使用`map`，否则`?`穿透不出闭包
             None => Ok(None),
         }
     }
 
+    fn status(&self) -> &VmStatus {
+        &self.status
+    }
+
     fn terminate(&mut self) -> Result<()> {
         // 杀死子进程
         self.process.kill()?;
+
+        // （杀死后）设置状态
+        // * 🚩【2024-04-02 21:42:30】目前直接覆盖状态
+        self.status = VmStatus::Terminated(Ok(()));
+
+        // 返回「终止完成」
         Ok(())
     }
 }
@@ -65,6 +94,8 @@ impl VmRuntime for CommandVmRuntime {
 impl VmLauncher<CommandVmRuntime> for CommandVm {
     fn launch(self) -> Result<CommandVmRuntime> {
         Ok(CommandVmRuntime {
+            // 状态：正在运行
+            status: VmStatus::Running,
             // 启动内部的「进程管理者」
             process: self.io_process.launch()?,
             // 输入转译器
@@ -349,7 +380,7 @@ pub mod tests {
                 // VOL指令：调整音量
                 Cmd::VOL(n) => format!("*volume={n}"),
                 // 其它类型
-                _ => return Err(TranslateError(format!("未知指令：{cmd:?}")).into()),
+                _ => return Err(TranslateError::UnsupportedInput(cmd).into()),
             };
             // 转换
             Ok(content)

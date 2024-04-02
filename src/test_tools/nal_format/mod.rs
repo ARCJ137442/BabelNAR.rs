@@ -3,7 +3,7 @@
 //! * 🎯提供一种（部分）兼容现有`.nal`格式文件的语法
 //!   * ⚠️对其中所有Narsese部分使用CommonNarsese「通用纳思语」：不兼容方言
 
-use std::time::Duration;
+use std::{result::Result::Err as StdErr, result::Result::Ok as StdOk, time::Duration};
 
 use super::structs::*;
 use anyhow::{Ok, Result};
@@ -132,6 +132,40 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
             let output_expectation = fold_pest_output_expectation(output_expectation)?;
             Ok(NALInput::ExpectContains(output_expectation))
         }
+        // 魔法注释/终止
+        Rule::comment_terminate => {
+            // 预置默认值
+            let mut if_not_user = false;
+            let mut result = StdOk(());
+
+            // 遍历其中的Pair
+            for inner in pair.into_inner() {
+                // 逐个匹配规则类型
+                //   * ✨comment_terminate_option: `if-not-user`
+                //   * ✨comment_raw: Err(`message`)
+                match inner.as_rule() {
+                    // 可选规则
+                    Rule::comment_terminate_option => {
+                        if inner.as_str() == "if-no-user" {
+                            if_not_user = true;
+                        }
+                    }
+                    // 错误消息
+                    Rule::comment_raw => {
+                        // 构造错误 | 仅取注释部分
+                        result = StdErr(inner.as_str().trim().into())
+                    }
+                    // 其它
+                    _ => unreachable!("不该被匹配到的规则\tpair = {inner:?}"),
+                }
+            }
+
+            // 构造&返回
+            Ok(NALInput::Terminate {
+                if_not_user,
+                result,
+            })
+        }
         // 其它情况
         _ => unreachable!("不该被匹配到的规则\tpair = {pair:?}"),
     }
@@ -186,7 +220,7 @@ fn fold_pest_output_operation(pair: Pair<Rule>) -> Result<Operation> {
     // 生成迭代器
     let mut pairs = pair.into_inner();
     // 取第一个子Pair当操作名 | 语法上保证一定有
-    let operator_name = pairs.next().unwrap().to_string();
+    let operator_name = pairs.next().unwrap().as_str().to_owned();
     // 操作参数
     let mut params = vec![];
     // 消耗剩下的，填充参数
@@ -241,7 +275,8 @@ G3! :|:
 ''sleep: 500ms
 10
 
-''expect-contains: EXE (^left, {SELF}, (*, P1, P2))";
+''expect-contains: EXE (^left, {SELF}, (*, P1, P2))
+''terminate(if-no-user)";
 
     #[test]
     fn test_parse() {
@@ -254,6 +289,7 @@ G3! :|:
         _test_parse("''sleep: 500ms");
         _test_parse("''sleep: 5000μs");
         _test_parse("''sleep: 600ns");
+        _test_parse("''terminate(if-no-user): 异常的退出消息！");
         _test_parse(TESTSET);
     }
 

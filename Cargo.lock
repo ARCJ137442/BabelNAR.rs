@@ -87,6 +87,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "thiserror",
  "ws",
 ]
 
@@ -449,7 +450,7 @@ dependencies = [
 
 [[package]]
 name = "navm"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "nar_dev_utils",

@@ -1,6 +1,12 @@
+//! 定义有关「输入输出转译器」的API
+//! * ✨类型别名
+//! * ✨特制结构
+//! * ✨特有错误类型
+
 use anyhow::Result;
 use navm::{cmd::Cmd, output::Output};
-use std::{error::Error, fmt::Display};
+use std::error::Error;
+use thiserror::Error;
 
 /// [`Cmd`]→进程输入 转译器
 /// * 🚩现在不再使用特征，以便在`Option<Box<InputTranslator>>`中推断类型
@@ -78,40 +84,60 @@ where
 
 /// 错误类型
 mod translate_error {
+    use anyhow::anyhow;
+
     use super::*;
 
     /// 统一封装「转译错误」
     /// * 🎯用于在[`anyhow`]下封装字符串，不再使用裸露的[`String`]类型
     /// * 🎯用于可识别的错误，并在打印时直接展示原因
     ///   * ⚠️若直接使用[`anyhow::anyhow`]，会打印一大堆错误堆栈
-    #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-    pub struct TranslateError(pub String);
+    /// * 🚩【2024-04-02 22:05:30】现在展开成枚举
+    ///   * 🎯以便捕获方识别为「警告」
+    #[derive(Debug, Error)]
+    pub enum TranslateError {
+        /// 不支持的NAVM指令
+        /// * 📌一般处理方法：警告+静默置空
+        /// * 📌用「调用者的处理场合」判断是「输入转译不支持」还是「输出转译不支持」
+        #[error("不支持的NAVM指令：\"{0}\"")]
+        UnsupportedInput(Cmd),
+        /// 解析错误
+        /// * 🎯表示原先的「转译错误」
+        #[error("NAVM转译错误：「{0}」")]
+        ParseError(#[from] anyhow::Error),
+    }
 
-    // ! ❌【2024-03-27 22:40:22】无法正常使用：不能导出带`format!`的宏
-    // * error: macro-expanded `macro_export` macros from the current crate cannot be referred to by absolute paths
-    // #[macro_export]
-    // macro_rules! translate_error {
-    //     ($($t:tt)*) => {
-    //         TranslateError(format!($($t)*))
-    //     };
+    // ! ❌弃用：为一个泛型参数实现转换，会导致其它「泛型实现」无法使用
+    // /// 灵活地从字符串转换为[`TranslateError`]
+    // impl<S: AsRef<str>> From<S> for TranslateError {
+    //     fn from(value: S) -> Self {
+    //         Self::ParseError(value.as_ref().to_string())
+    //     }
     // }
-
     /// 灵活地从字符串转换为[`TranslateError`]
-    impl<S: AsRef<str>> From<S> for TranslateError {
-        fn from(value: S) -> Self {
-            Self(value.as_ref().to_string())
+    impl From<&'_ str> for TranslateError {
+        fn from(value: &'_ str) -> Self {
+            Self::ParseError(anyhow!("{value}"))
+        }
+    }
+    impl From<&'_ String> for TranslateError {
+        fn from(value: &'_ String) -> Self {
+            Self::ParseError(anyhow!("{value}"))
         }
     }
 
     /// 灵活地从[`Error`]转换为[`TranslateError`]
     impl TranslateError {
         /// 从[`Error`]转换为[`TranslateError`]
+        /// * 🚩目前还是调用
         pub fn from_error(value: impl Error) -> Self {
-            Self(value.to_string())
+            Self::from(&value.to_string())
         }
+
         /// 从[`Error`]转换为[`anyhow::Error`]
-        pub fn error_anyhow(value: impl Error) -> anyhow::Error {
-            Self::from_error(value).into()
+        /// * 🚩【2024-04-02 22:39:47】此处「转换为[`anyhow::Error`]的需求」就是`Error + Send + Sync + 'static`
+        pub fn error_anyhow(value: impl Error + Send + Sync + 'static) -> anyhow::Error {
+            Self::ParseError(value.into()).into()
         }
 
         /// 从「一切可以转换为其自身的值」构建[`anyhow::Result`]
@@ -130,14 +156,6 @@ mod translate_error {
             anyhow::Error::from(value.into())
         }
     }
-    /// 展示错误
-    impl Display for TranslateError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "TranslateError: {}", self.0)
-        }
-    }
-    /// 实现[`Error`]特征
-    impl Error for TranslateError {}
 }
 pub use translate_error::*;
 

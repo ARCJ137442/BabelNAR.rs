@@ -5,6 +5,7 @@
 ' * 📝统一的NAL测试语法：`''expect-contains: 【输出类别】 【其它内容】`
 '   * 📄预期「回答」：`''expect-contains: ANSWER 【CommonNarsese】`
 '   * 📄预期「操作」：`''expect-contains: EXE (^【操作名】, 【操作参数（CommonNarsese词项）】)`
+' * 🚩【2024-04-03 02:10:19】有时对操作需要等待足够的时长，才能捕获到输出
 
 A. :|:
 <(*, {SELF}) --> ^left>. :|:
@@ -12,6 +13,7 @@ G. :|:
 A. :|:
 G! :|:
 10
+''sleep: 1s
 ''expect-contains: EXE (^left, {SELF})
 
 A2. :|:
@@ -20,6 +22,7 @@ G2. :|:
 A2. :|:
 G2! :|:
 10
+''sleep: 1s
 ''expect-contains: EXE (^left, {SELF}, P)
 
 A3. :|:
@@ -28,4 +31,8 @@ G3. :|:
 A3. :|:
 G3! :|:
 10
+''sleep: 1s
 ''expect-contains: EXE (^left, {SELF}, (*, P1, P2))
+
+''sleep: 500ms
+''terminate(if-no-user)

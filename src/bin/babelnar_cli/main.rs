@@ -7,6 +7,7 @@
 //! usage: BabelNAR [OPTIONS] <INPUT>
 //! ```
 
+use anyhow::Result;
 use babel_nar::println_cli;
 use clap::Parser;
 use std::io::Result as IoResult;
@@ -26,7 +27,7 @@ nar_dev_utils::mods! {
 }
 
 /// 主入口
-pub fn main() {
+pub fn main() -> Result<()> {
     // 以默认参数启动
     main_args(env::current_dir(), env::args())
 }
@@ -34,7 +35,7 @@ pub fn main() {
 /// 以特定参数开始命令行主程序
 /// * 🚩此处只应该有自[`env`]传入的参数
 /// * 🚩【2024-04-01 14:25:38】暂时用不到「当前工作路径」
-pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) {
+pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) -> Result<()> {
     let args = CliArgs::parse_from(args);
     // 读取配置 | with 默认配置文件
     let mut config = load_config(&args, DEFAULT_CONFIG_PATH);
@@ -49,30 +50,30 @@ pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) {
             println_cli!([Error] "NARS运行时启动错误：{e}");
             println_cli!([Info] "程序将在 3 秒后自动退出。。。");
             sleep(Duration::from_secs(3));
-            return;
+            return Err(e);
         }
     };
     // 运行时交互、管理
     let manager = RuntimeManager::new(runtime, config.clone());
-    loop_manage(manager, &config);
+    let result = loop_manage(manager, &config);
 
     // 最终退出
     println_cli!([Info] "程序将在 5 秒后退出");
     sleep(Duration::from_secs(5));
+    result
 }
 
 /// 单元测试
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nar_dev_utils::if_return;
 
-    /// 测试入口
+    /// 测试入口/ONA/交互shell
+    /// * 🎯正常BabelNAR CLI shell启动
+    /// * 🎯正常用户命令行交互体验
+    /// * ⚠️使用与项目无关的路径，以定位启动CIN
     #[test]
-    pub fn main_ona() {
-        // ! 此处需要测试用路径
-        const PATH_ONA_EXE: &str = "../../NARS-executables/NAR.exe";
-        if_return! { !PathBuf::from(PATH_ONA_EXE).exists() }
+    pub fn main_ona_shell() -> Result<()> {
         // 以默认参数启动
         main_args(
             env::current_dir(),
@@ -86,4 +87,39 @@ mod tests {
             .map(str::to_string),
         )
     }
+
+    /// 测试入口/ONA/预加载NAL
+    /// * 🎯多「虚拟机启动配置」合并
+    /// * 🎯预引入NAL
+    /// * ⚠️使用与项目无关的路径，以定位启动CIN
+    pub fn main_ona_prelude(prelude_config_path: &str) -> Result<()> {
+        // 以默认参数启动
+        main_args(
+            env::current_dir(),
+            [
+                "test.exe",
+                "-d",
+                // 第一个文件，指示ONA
+                "-c",
+                "./src/tests/cli/config/test_ona.json",
+                // 第二个文件，指示预加载
+                "-c",
+                prelude_config_path,
+            ]
+            .into_iter()
+            .map(str::to_string),
+        )
+    }
+
+    #[test]
+    pub fn test_ona_prelude_de() -> Result<()> {
+        main_ona_prelude("./src/tests/cli/config/test_prelude_simple_deduction.json")
+    }
+
+    #[test]
+    pub fn test_ona_prelude_op() -> Result<()> {
+        main_ona_prelude("./src/tests/cli/config/test_prelude_operation.json")
+    }
 }
+
+// mod test_ws;
