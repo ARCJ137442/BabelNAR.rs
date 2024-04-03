@@ -3,124 +3,25 @@
 use crate::{launch_by_config, InputMode, LaunchConfig, LaunchConfigPreludeNAL};
 use anyhow::{anyhow, Result};
 use babel_nar::{
-    cli_support::error_handling_boost::error_anyhow,
+    cli_support::{
+        error_handling_boost::error_anyhow,
+        io::{navm_output_cache::OutputCache, readline_iter::ReadlineIter},
+    },
     eprintln_cli, println_cli,
     test_tools::{nal_format::parse, put_nal, VmOutputCache},
 };
 use nar_dev_utils::{if_return, ResultBoost};
 use navm::{
     cmd::Cmd,
-    output::Output,
     vm::{VmRuntime, VmStatus},
 };
 use std::{
     fmt::Debug,
-    io::Result as IoResult,
     ops::{ControlFlow, ControlFlow::Break, ControlFlow::Continue},
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex},
     thread::{self, sleep, JoinHandle},
     time::Duration,
 };
-
-/// 读取行迭代器
-/// * 🚩每迭代一次，请求用户输入一行
-/// * ✨自动清空缓冲区
-/// * ❌无法在【不复制字符串】的情况下实现「迭代出所输入内容」的功能
-///   * ❌【2024-04-02 03:49:56】无论如何都无法实现：迭代器物件中引入就必须碰生命周期
-/// * 🚩最终仍需复制字符串：调用处方便使用
-/// * ❓是否需要支持提示词
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ReadlineIter {
-    pub buffer: String,
-}
-
-/// 实现迭代器
-impl Iterator for ReadlineIter {
-    type Item = IoResult<String>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // 清空缓冲区
-        self.buffer.clear();
-        // 读取一行
-        // * 📝此处的`stdin`是懒加载的
-        if let Err(e) = std::io::stdin().read_line(&mut self.buffer) {
-            return Some(Err(e));
-        }
-        // 返回
-        Some(IoResult::Ok(self.buffer.clone()))
-    }
-}
-
-/// 线程间可变引用计数的别名
-type ArcMutex<T> = Arc<Mutex<T>>;
-
-/// 输出缓存
-/// * 🎯统一「加入输出⇒打印输出」的逻辑
-/// * 🚩仅封装一个[`Vec`]，而不对其附加任何[`Arc`]、[`Mutex`]的限定
-///   * ❌【2024-04-03 01:43:13】[`Arc`]必须留给[`RuntimeManager`]：需要对其中键的值进行引用
-#[derive(Debug)]
-pub struct OutputCache {
-    /// 内部封装的输出数组
-    /// * 🚩【2024-04-03 01:43:41】不附带任何包装类型，仅包装其自身
-    inner: Vec<Output>,
-}
-
-/// 功能实现
-impl OutputCache {
-    /// 构造函数
-    pub fn new(inner: Vec<Output>) -> Self {
-        Self { inner }
-    }
-
-    /// 默认[`Arc`]<[`Mutex`]>
-    pub fn default_arc_mutex() -> ArcMutex<Self> {
-        Arc::new(Mutex::new(Self::default()))
-    }
-
-    /// 从[`Arc`]<[`Mutex`]>中解锁
-    pub fn unlock_arc_mutex(arc_mutex: &mut ArcMutex<Self>) -> Result<MutexGuard<'_, Self>> {
-        arc_mutex.lock().transform_err(error_anyhow)
-    }
-}
-
-/// 默认构造：空数组
-impl Default for OutputCache {
-    fn default() -> Self {
-        Self::new(vec![])
-    }
-}
-
-/// 实现「输出缓存」
-/// * 不再涉及任何[`Arc`]或[`Mutex`]
-impl VmOutputCache for OutputCache {
-    /// 存入输出
-    /// * 🎯统一的「打印输出」逻辑
-    ///   * 🚩【2024-04-03 01:07:55】不打算封装了
-    fn put(&mut self, output: Output) -> Result<()> {
-        // 尝试打印输出
-        println_cli!(&output);
-
-        // 加入输出
-        self.inner.push(output);
-        Ok(())
-    }
-
-    /// 遍历输出
-    /// * 🚩不是返回迭代器，而是用闭包开始计算
-    fn for_each<T>(&self, f: impl Fn(&Output) -> ControlFlow<T>) -> Result<Option<T>> {
-        // 遍历
-        for output in self.inner.iter() {
-            // 基于控制流的运行
-            match f(output) {
-                ControlFlow::Break(value) => return Ok(Some(value)),
-                ControlFlow::Continue(()) => {}
-            }
-        }
-
-        // 返回
-        Ok(None)
-    }
-}
 
 /// 运行时管理器
 /// * 🎯在一个数据结构中封装「虚拟机运行时」与「配置信息」

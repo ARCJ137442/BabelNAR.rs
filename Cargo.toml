@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.13.0"
+version = "0.13.1"
 edition = "2021"
 
 # Cargo文档参考：<https://rustwiki.org/zh-CN/cargo/reference/manifest.html>
