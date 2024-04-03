@@ -76,9 +76,11 @@ where
 
     /// 所涉及的运行时
     pub(crate) output_cache: ArcMutex<OutputCache>,
-
-    /// 连接（服务端这方的）发送者
-    pub(crate) sender: Sender,
+    // /// 连接（服务端这方的）发送者
+    // /// * 🚩【2024-04-03 19:44:58】现在不再需要
+    // pub(crate) sender: Sender,
+    /// 连接id
+    pub(crate) id: u32,
 }
 
 impl<R> Handler for Connection<R>
@@ -104,30 +106,26 @@ where
         let output_cache = &mut *try_or_return_err!(self.output_cache.lock(); err => "在Websocket连接中获取输出缓存失败：{err}");
 
         // 输入信息，并监控缓存的新输出
-        let old_len_cache = output_cache.borrow_inner().len();
-        try_or_return_err!(RuntimeManager::input_line_to_vm(
-            runtime,
-            &msg.to_string(),
-            config,
-            output_cache
-        ); err => "在Websocket连接中输入「{msg}」时发生错误：{err}");
-        // TODO: 此处是异步的，所以输出放在了别的地方
-        let new_len_cache = dbg!(output_cache.borrow_inner()).len();
-
-        // 若有输出，则获取并回传JSON信息
-        if new_len_cache > old_len_cache {
-            let mut output;
-            let mut json_text;
-            // 逐个获取
-            for i in (old_len_cache - 1)..new_len_cache {
-                output = &output_cache.borrow_inner()[i];
-                json_text = output.to_json_string();
-                // 回传，若出错仅输出错误
-                if let Err(e) = self.sender.send(json_text.clone()) {
-                    eprintln_cli!([Error] "尝试回传消息「{json_text}」时发生错误：{e}");
-                }
-            }
+        if let Err(err) =
+            RuntimeManager::input_line_to_vm(runtime, &msg.to_string(), config, output_cache)
+        {
+            eprintln_cli!([Error] "在Websocket连接中输入「{msg}」时发生错误：{err}")
         }
+
+        // ! 🚩此处无法回传输出：输出捕捉在缓存中处理的地方
+        // if new_len_cache > old_len_cache {
+        //     let mut output;
+        //     let mut json_text;
+        //     // 逐个获取
+        //     for i in (old_len_cache - 1)..new_len_cache {
+        //         output = &output_cache.borrow_inner()[i];
+        //         json_text = output.to_json_string();
+        //         // 回传，若出错仅输出错误
+        //         if let Err(e) = self.sender.send(json_text.clone()) {
+        //             eprintln_cli!([Error] "尝试回传消息「{json_text}」时发生错误：{e}");
+        //         }
+        //     }
+        // }
 
         Ok(())
     }
@@ -182,11 +180,25 @@ where
 
     fn connection_made(&mut self, sender: Sender) -> Connection<R> {
         println_cli!([Info] "Websocket连接已建立");
+        let id = sender.connection_id();
+        // 尝试添加「发送者」
+        match self.output_cache.lock() {
+            Ok(mut output_cache) => {
+                let output_cache = &mut *output_cache;
+                // 添加「发送者」
+                output_cache.websocket_senders.push(sender);
+            }
+            Err(err) => {
+                // 输出错误
+                println_cli!([Error] "Websocket输出侦听器添加失败：{err}");
+            }
+        }
+        // 返回连接
         Connection {
-            sender,
             runtime: self.runtime.clone(),
             config: self.config.clone(),
             output_cache: self.output_cache.clone(),
+            id,
         }
     }
 
@@ -194,15 +206,7 @@ where
         println_cli!([Info] "Websocket服务器已关停")
     }
 
-    fn client_connected(&mut self, ws: Sender) -> Self::Handler {
-        self.connection_made(ws)
-    }
-
-    fn server_connected(&mut self, ws: Sender) -> Self::Handler {
-        self.connection_made(ws)
-    }
-
     fn connection_lost(&mut self, handler: Self::Handler) {
-        eprintln_cli!([Error] "与id为{}", handler.sender.connection_id());
+        eprintln_cli!([Error] "与id为 {} 的客户端断开连接！", handler.id);
     }
 }

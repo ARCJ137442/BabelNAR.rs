@@ -2,6 +2,7 @@
 //! * 🎯一站式存储、展示与管理NAVM的输出
 //! * 🎯可被其它二进制库所复用
 
+use super::output_print::OutputType;
 use crate::{cli_support::error_handling_boost::error_anyhow, test_tools::VmOutputCache};
 use anyhow::Result;
 use nar_dev_utils::ResultBoost;
@@ -10,8 +11,6 @@ use std::{
     ops::ControlFlow,
     sync::{Arc, Mutex, MutexGuard},
 };
-
-use super::output_print::OutputType;
 
 /// 线程间可变引用计数的别名
 pub type ArcMutex<T> = Arc<Mutex<T>>;
@@ -24,14 +23,22 @@ pub type ArcMutex<T> = Arc<Mutex<T>>;
 pub struct OutputCache {
     /// 内部封装的输出数组
     /// * 🚩【2024-04-03 01:43:41】不附带任何包装类型，仅包装其自身
-    inner: Vec<Output>,
+    pub(crate) inner: Vec<Output>,
+
+    /// 内部封装的「发送者」列表
+    /// * 🎯Websocket输出回传（JSON）
+    /// TODO: 🏗️后续优化
+    pub websocket_senders: Vec<ws::Sender>,
 }
 
 /// 功能实现
 impl OutputCache {
     /// 构造函数
     pub fn new(inner: Vec<Output>) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            websocket_senders: Vec::new(),
+        }
     }
 
     /// 不可变借用内部
@@ -81,6 +88,14 @@ impl VmOutputCache for OutputCache {
         // 打印输出
         // * 🚩现在内置入「命令行支持」，不再能直接使用`println_cli`
         OutputType::print_from_navm_output(&output);
+
+        // 回传JSON
+        // TODO: 待优化
+        for sender in &self.websocket_senders {
+            if let Err(e) = sender.send(output.to_json_string()) {
+                OutputType::Error.print_line(&format!("Websocket💬回传失败：{e}"));
+            }
+        }
 
         // 静默加入输出
         self.put_silent(output)

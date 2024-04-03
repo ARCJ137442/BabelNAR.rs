@@ -24,8 +24,8 @@ use std::path::PathBuf;
 pub fn polyfill_config_from_user(config: &mut LaunchConfig) {
     if config.need_polyfill() {
         // * 🚩【2024-04-03 19:33:20】目前是要求输入配置文件路径
-        print!("> 请输入配置文件路径（如`C:/nars/BabelNAR.launch.json`）: ");
-        for input in ReadlineIter::new("") {
+        for input in ReadlineIter::new("请输入配置文件地址（如`BabelNAR.launch.json`）: ")
+        {
             if let Err(e) = input {
                 eprintln_cli!([Error] "输入无效：{e}");
                 continue;
@@ -35,9 +35,6 @@ pub fn polyfill_config_from_user(config: &mut LaunchConfig) {
                 eprintln_cli!([Error] "文件「{path:?}」不存在");
                 continue;
             }
-
-            // 新的input
-            print!("> 请输入配置文件地址（如`BabelNAR.launch.json`）: ");
         }
     }
 }

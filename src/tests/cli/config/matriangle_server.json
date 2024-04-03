@@ -4,5 +4,5 @@
         "host": "localhost",
         "port": 8765
     },
-    "input_mode": "cmd"
+    "inputMode": "cmd"
 }
