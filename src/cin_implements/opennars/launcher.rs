@@ -10,6 +10,7 @@ use crate::{
     runtimes::{CommandGenerator, CommandVm, CommandVmRuntime},
 };
 use anyhow::Result;
+use nar_dev_utils::manipulate;
 use navm::{
     cmd::Cmd,
     vm::{VmLauncher, VmRuntime},
@@ -49,12 +50,14 @@ impl VmLauncher<CommandVmRuntime> for OpenNARS {
         let command_java = self.command_generator.generate_command();
 
         // 构造并启动虚拟机
-        let mut vm = CommandVm::from(command_java)
-            // * 🚩固定的「输入输出转换器」
-            .input_translator(input_translate)
-            .output_translator(output_translate)
-            // 🔥启动
-            .launch()?;
+        let mut vm = manipulate!(
+            CommandVm::from(command_java)
+            // * 🚩固定的「输入输出转译器」
+            => .input_translator(input_translate)
+            => .output_translator(output_translate)
+        )
+        // 🔥启动
+        .launch()?;
 
         // 设置初始音量
         if let Some(volume) = self.initial_volume {

@@ -24,7 +24,7 @@ use std::path::PathBuf;
 pub fn polyfill_config_from_user(config: &mut LaunchConfig) {
     if config.need_polyfill() {
         // * 🚩【2024-04-03 19:33:20】目前是要求输入配置文件路径
-        for line in ReadlineIter::new("请输入配置文件地址（如`BabelNAR.launch.json`）: ")
+        for line in ReadlineIter::new("请输入配置文件路径（如`BabelNAR.launch.json`）: ")
         {
             // 检验输入
             if let Err(e) = line {
@@ -62,7 +62,7 @@ pub fn launch_by_config(config: LaunchConfig) -> Result<impl VmRuntime> {
     // 配置虚拟机
     if let Some(translators) = config.translators {
         // 因为配置函数的设计，此处要暂时借用所有权
-        vm = config_launcher_translators(vm, &translators)?;
+        config_launcher_translators(&mut vm, &translators)?;
     }
 
     // 启动虚拟机
@@ -89,11 +89,15 @@ pub fn load_command_vm(config: LaunchConfigCommand) -> Result<CommandVm> {
 /// * ⚠️可能会有「转译器没找到/转译器加载失败」等
 /// * 📌【2024-04-02 01:49:46】此处需要暂时借用所有权
 pub fn config_launcher_translators(
-    vm: CommandVm,
+    vm: &mut CommandVm,
     config: &LaunchConfigTranslators,
-) -> Result<CommandVm> {
+) -> Result<()> {
+    // 获取转译器
     let translators = get_translator_by_name(config)?;
-    Ok(vm.translators(translators))
+    // 设置转译器
+    vm.translators(translators);
+    // 返回成功
+    Ok(())
 }
 
 /// 从「转译器名」检索「输入输出转译器」

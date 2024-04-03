@@ -3,7 +3,7 @@
 //! * ✨特制结构
 //! * ✨特有错误类型
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use navm::{cmd::Cmd, output::Output};
 use std::error::Error;
 use thiserror::Error;
@@ -22,7 +22,35 @@ pub type InputTranslator = dyn Fn(Cmd) -> Result<String> + Send + Sync;
 ///   * 只有转译功能，没有其它涉及外部的操作（纯函数）
 pub type OutputTranslator = dyn Fn(String) -> Result<Output> + Send + Sync;
 
-/// IO转换器配置
+/// 默认输入转译器
+/// * 🎯给「输入输出转译器」提供「默认选项」
+/// * 🚩按照NAVM指令原样输入：调用[`Cmd::to_string`]原样转换成字符串
+pub fn default_input_translate(cmd: Cmd) -> Result<String> {
+    Ok(cmd.to_string())
+}
+
+/// 默认输出转译器
+/// * 🎯给「输入输出转译器」提供「默认选项」
+/// * 🚩不含任何实质转译逻辑，原样保留在「其它」输出中
+pub fn default_output_translate(content: String) -> Result<Output> {
+    Ok(Output::OTHER { content })
+}
+
+/// 获取「默认输入转译器」
+/// * 🎯统一提供默认值
+/// * 🚩使用函数指针，以优化先前「创建闭包」产生的性能开销
+pub fn default_input_translator() -> Box<InputTranslator> {
+    Box::new(default_input_translate)
+}
+
+/// 获取「默认输出转译器」
+/// * 🎯统一提供默认值
+/// * 🚩使用函数指针，以优化先前「创建闭包」产生的性能开销
+pub fn default_output_translator() -> Box<OutputTranslator> {
+    Box::new(default_output_translate)
+}
+
+/// IO转译器配置
 /// * 🎯封装并简化其它地方的`translator: impl Fn(...) -> ... + ...`逻辑
 /// * 📝【2024-03-27 10:38:41】无论何时都不推荐直接用`impl Fn`作为字段类型
 ///   * ⚠️直接使用会意味着「需要编译前确定类型」
@@ -84,9 +112,8 @@ where
 
 /// 错误类型
 mod translate_error {
-    use anyhow::anyhow;
-
     use super::*;
+    use anyhow::anyhow;
 
     /// 统一封装「转译错误」
     /// * 🎯用于在[`anyhow`]下封装字符串，不再使用裸露的[`String`]类型

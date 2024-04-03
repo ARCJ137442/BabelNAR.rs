@@ -46,7 +46,7 @@ impl VmLauncher<CommandVmRuntime> for CXinJS {
             self.command_generator
             // 构造指令 | 预置的指令参数
             => .generate_command()
-            // * 🚩固定的「输入输出转换器」
+            // * 🚩固定的「输入输出转译器」
             => generate_command_vm(_, (input_translate, output_translate))
             // 🔥启动
             => .launch()

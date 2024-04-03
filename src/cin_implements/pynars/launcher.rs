@@ -11,6 +11,7 @@ use crate::{
     runtimes::{CommandGenerator, CommandVm, CommandVmRuntime},
 };
 use anyhow::Result;
+use nar_dev_utils::manipulate;
 use navm::vm::VmLauncher;
 use std::path::PathBuf;
 
@@ -41,12 +42,14 @@ impl VmLauncher<CommandVmRuntime> for PyNARS {
         let command = self.command_generator.generate_command();
 
         // 构造并启动虚拟机
-        CommandVm::from(command)
-            // * 🚩固定的「输入输出转换器」
-            .input_translator(input_translate)
-            .output_translator(output_translate)
-            // 🔥启动
-            .launch()
+        manipulate!(
+            CommandVm::from(command)
+            // * 🚩固定的「输入输出转译器」
+            => .input_translator(input_translate)
+            => .output_translator(output_translate)
+        )
+        // 🔥启动
+        .launch()
     }
 }
 

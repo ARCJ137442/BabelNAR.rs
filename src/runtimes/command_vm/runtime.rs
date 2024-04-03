@@ -6,7 +6,10 @@
 //!       2. 子进程 >>> 进程输出 >>> NAVM输出[`Output`]
 //!     * 🚩实现方式：两处转译器
 
-use super::{CommandVm, InputTranslator, OutputTranslator};
+use super::{
+    default_input_translator, default_output_translator, CommandVm, InputTranslator,
+    OutputTranslator,
+};
 use crate::process_io::IoProcessManager;
 use anyhow::{anyhow, Result};
 use nar_dev_utils::if_return;
@@ -102,13 +105,15 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
             // 输入转译器
             input_translator: self
                 .input_translator
-                // 默认值：直接调用Cmd的`to_string`方法 | 使用NAVM Cmd语法
-                .unwrap_or(Box::new(|cmd| Ok(cmd.to_string()))),
+                // 解包or使用默认值
+                // * 🚩【2024-04-04 02:02:53】似乎不应有如此默认行为：后续若配置载入失败，将难以识别问题
+                .unwrap_or(default_input_translator()),
             // 输出转译器
             output_translator: self
                 .output_translator
-                // 默认值：直接归入「其它」输出 | 约等于不分类
-                .unwrap_or(Box::new(|content| Ok(Output::OTHER { content }))),
+                // 解包or使用默认值
+                // * 🚩【2024-04-04 02:02:53】似乎不应有如此默认行为：后续若配置载入失败，将难以识别问题
+                .unwrap_or(default_output_translator()),
             // * 🚩【2024-03-24 02:06:59】目前到此为止：只需处理「转译」问题
         })
     }
@@ -121,6 +126,7 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
 pub mod tests {
     use super::*;
     use crate::runtimes::TranslateError;
+    use nar_dev_utils::manipulate;
     use narsese::{
         api::{GetBudget, GetPunctuation, GetStamp, GetTerm, GetTruth},
         conversion::{
@@ -403,14 +409,16 @@ pub mod tests {
         }
 
         // 构造并启动虚拟机
-        let vm = CommandVm::from(command_java)
+        let vm = manipulate!(
+            CommandVm::from(command_java)
             // 输入转译器
-            .input_translator(input_translate)
+            => .input_translator(input_translate)
             // 输出转译器
-            .output_translator(output_translate)
-            // 🔥启动
-            .launch()
-            .expect("无法启动虚拟机");
+            => .output_translator(output_translate)
+        )
+        // 🔥启动
+        .launch()
+        .expect("无法启动虚拟机");
         _test_opennars(vm);
     }
 
@@ -439,12 +447,16 @@ pub mod tests {
     /// * 🚩通过预置的批处理文件启动
     #[test]
     fn test_pynars() {
-        let vm = CommandVm::new(EXE_PATH_PYNARS)
+        let vm = manipulate!(
+            CommandVm::new(EXE_PATH_PYNARS)
             // 输入转译器：直接取其尾部
-            .input_translator(|cmd| Ok(cmd.tail()))
-            // 🔥启动
-            .launch()
-            .expect("无法启动虚拟机");
+            => .input_translator(|cmd| Ok(cmd.tail()))
+            // 暂无输出转译器
+            // => .output_translator(output_translate)
+        )
+        // 🔥启动
+        .launch()
+        .expect("无法启动虚拟机");
         // 可复用的测试逻辑
         _test_pynars(vm);
     }

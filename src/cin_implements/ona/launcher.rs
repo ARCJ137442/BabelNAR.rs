@@ -57,7 +57,7 @@ impl VmLauncher<CommandVmRuntime> for ONA {
             self.exe_path
             // 构造指令 | 预置的指令参数
             => generate_command(_, None::<String>, COMMAND_ARGS_ONA.into_iter().by_ref())
-            // * 🚩固定的「输入输出转换器」
+            // * 🚩固定的「输入输出转译器」
             => generate_command_vm(_, (input_translate, output_translate))
             // 🔥启动
             => .launch()

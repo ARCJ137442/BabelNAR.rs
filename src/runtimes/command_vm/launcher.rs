@@ -32,27 +32,30 @@ impl CommandVm {
 
     /// 配置/输入转译器
     /// * 💭何时Rust能给特征起别名。。
+    /// * 🚩【2024-04-04 02:06:57】不再需要借走所有权
+    ///   * ✅链式操作现在可以使用[`util::manipulate`]简化
     pub fn input_translator(
-        mut self,
+        &mut self,
         translator: impl Fn(Cmd) -> Result<String> + Send + Sync + 'static,
-    ) -> Self {
+    ) {
         self.input_translator = Some(Box::new(translator));
-        self
     }
 
     /// 配置/输出转译器
+    /// * 🚩【2024-04-04 02:06:57】不再需要借走所有权
+    ///   * ✅链式操作现在可以使用[`util::manipulate`]简化
     pub fn output_translator(
-        mut self,
+        &mut self,
         translator: impl Fn(String) -> Result<Output> + Send + Sync + 'static,
-    ) -> Self {
+    ) {
         self.output_translator = Some(Box::new(translator));
-        self
     }
 
     /// 配置/输入输出转译器组
     pub fn translators(mut self, translators: impl Into<IoTranslators>) -> Self {
         // 一次实现俩
         let translators = translators.into();
+        // 直接赋值
         self.input_translator = Some(translators.input_translator);
         self.output_translator = Some(translators.output_translator);
         self
