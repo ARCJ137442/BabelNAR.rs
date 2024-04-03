@@ -1,7 +1,7 @@
 //! 用于从「启动参数」启动NAVM运行时
 
-use crate::{LaunchConfig, LaunchConfigCommand, LaunchConfigTranslators};
-use anyhow::{anyhow, Ok, Result};
+use crate::{read_config_extern, LaunchConfig, LaunchConfigCommand, LaunchConfigTranslators};
+use anyhow::{anyhow, Result};
 use babel_nar::{
     cin_implements::{
         common::generate_command, cxin_js, nars_python, ona, openjunars, opennars, pynars,
@@ -24,17 +24,30 @@ use std::path::PathBuf;
 pub fn polyfill_config_from_user(config: &mut LaunchConfig) {
     if config.need_polyfill() {
         // * 🚩【2024-04-03 19:33:20】目前是要求输入配置文件路径
-        for input in ReadlineIter::new("请输入配置文件地址（如`BabelNAR.launch.json`）: ")
+        for line in ReadlineIter::new("请输入配置文件地址（如`BabelNAR.launch.json`）: ")
         {
-            if let Err(e) = input {
+            // 检验输入
+            if let Err(e) = line {
                 eprintln_cli!([Error] "输入无效：{e}");
                 continue;
             }
-            let path = PathBuf::from(input.unwrap());
+            // 检验路径
+            let path = PathBuf::from(line.unwrap().trim());
             if !path.is_file() {
                 eprintln_cli!([Error] "文件「{path:?}」不存在");
                 continue;
             }
+            // 读取配置文件
+            let content = match read_config_extern(&path) {
+                Ok(config) => config,
+                Err(e) => {
+                    eprintln_cli!([Error] "配置文件「{path:?}」读取失败：{e}");
+                    continue;
+                }
+            };
+            // 读取成功⇒覆盖，返回
+            *config = content;
+            break;
         }
     }
 }
