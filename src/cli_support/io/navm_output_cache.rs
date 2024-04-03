@@ -14,7 +14,7 @@ use std::{
 use super::output_print::OutputType;
 
 /// 线程间可变引用计数的别名
-type ArcMutex<T> = Arc<Mutex<T>>;
+pub type ArcMutex<T> = Arc<Mutex<T>>;
 
 /// 输出缓存
 /// * 🎯统一「加入输出⇒打印输出」的逻辑
@@ -32,6 +32,16 @@ impl OutputCache {
     /// 构造函数
     pub fn new(inner: Vec<Output>) -> Self {
         Self { inner }
+    }
+
+    /// 不可变借用内部
+    pub fn borrow_inner(&self) -> &Vec<Output> {
+        &self.inner
+    }
+
+    /// 可变借用内部
+    pub fn borrow_inner_mut(&mut self) -> &mut Vec<Output> {
+        &mut self.inner
     }
 
     /// 默认[`Arc`]<[`Mutex`]>

@@ -8,7 +8,7 @@
 //! ```
 
 use anyhow::Result;
-use babel_nar::println_cli;
+use babel_nar::{eprintln_cli, println_cli};
 use clap::Parser;
 use std::io::Result as IoResult;
 use std::thread::sleep;
@@ -24,6 +24,8 @@ nar_dev_utils::mods! {
     use config_launcher;
     // 运行时交互、管理
     use runtime_manage;
+    // Websocket服务端
+    use websocket_server;
 }
 
 /// 主入口
@@ -36,6 +38,10 @@ pub fn main() -> Result<()> {
 /// * 🚩此处只应该有自[`env`]传入的参数
 /// * 🚩【2024-04-01 14:25:38】暂时用不到「当前工作路径」
 pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) -> Result<()> {
+    // （Windows下）启用终端颜色
+    let _ = colored::control::set_virtual_terminal(true)
+        .inspect_err(|_| eprintln_cli!([Error] "无法启动终端彩色显示。。"));
+    // 解析命令行参数
     let args = CliArgs::parse_from(args);
     // 读取配置 | with 默认配置文件
     let mut config = load_config(&args, DEFAULT_CONFIG_PATH);
@@ -127,6 +133,25 @@ mod tests {
     pub fn test_ona_prelude_op() -> Result<()> {
         main_ona_prelude("./src/tests/cli/config/test_prelude_operation.json")
     }
+    /// 测试入口/ONA/交互shell
+    /// * 🎯正常BabelNAR CLI shell启动
+    /// * 🎯正常用户命令行交互体验
+    /// * ⚠️使用与项目无关的路径，以定位启动CIN
+    #[test]
+    pub fn main_ona_websocket() -> Result<()> {
+        // 以默认参数启动
+        main_args(
+            env::current_dir(),
+            [
+                "test.exe",
+                "-d",
+                "-c",
+                "./src/tests/cli/config/test_ona.json",
+                "-c",
+                "./src/tests/cli/config/websocket.json",
+            ]
+            .into_iter()
+            .map(str::to_string),
+        )
+    }
 }
-
-// mod test_ws;

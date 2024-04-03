@@ -6,7 +6,8 @@ use babel_nar::{
     cin_implements::{
         common::generate_command, cxin_js, nars_python, ona, openjunars, opennars, pynars,
     },
-    cli_support::cin_search::name_match::name_match,
+    cli_support::{cin_search::name_match::name_match, io::readline_iter::ReadlineIter},
+    eprintln_cli,
     runtimes::{
         api::{InputTranslator, IoTranslators},
         CommandVm, OutputTranslator,
@@ -17,11 +18,27 @@ use navm::{
     output::Output,
     vm::{VmLauncher, VmRuntime},
 };
+use std::path::PathBuf;
 
 /// （若缺省）要求用户手动填充配置项
 pub fn polyfill_config_from_user(config: &mut LaunchConfig) {
     if config.need_polyfill() {
-        // TODO: 在有缺省的情况下 手动要求用户输入填补缺省项
+        // * 🚩【2024-04-03 19:33:20】目前是要求输入配置文件路径
+        print!("> 请输入配置文件路径（如`C:/nars/BabelNAR.launch.json`）: ");
+        for input in ReadlineIter::new("") {
+            if let Err(e) = input {
+                eprintln_cli!([Error] "输入无效：{e}");
+                continue;
+            }
+            let path = PathBuf::from(input.unwrap());
+            if !path.is_file() {
+                eprintln_cli!([Error] "文件「{path:?}」不存在");
+                continue;
+            }
+
+            // 新的input
+            print!("> 请输入配置文件地址（如`BabelNAR.launch.json`）: ");
+        }
     }
 }
 

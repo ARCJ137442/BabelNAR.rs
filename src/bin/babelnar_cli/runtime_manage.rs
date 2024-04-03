@@ -1,11 +1,15 @@
 //! 启动后运行时的（交互与）管理
 
+use super::websocket_server::*;
 use crate::{launch_by_config, InputMode, LaunchConfig, LaunchConfigPreludeNAL};
 use anyhow::{anyhow, Result};
 use babel_nar::{
     cli_support::{
         error_handling_boost::error_anyhow,
-        io::{navm_output_cache::OutputCache, readline_iter::ReadlineIter},
+        io::{
+            navm_output_cache::{ArcMutex, OutputCache},
+            readline_iter::ReadlineIter,
+        },
     },
     eprintln_cli, println_cli,
     test_tools::{nal_format::parse, put_nal, VmOutputCache},
@@ -36,17 +40,17 @@ where
     /// 内部封装的虚拟机运行时
     /// * 🏗️后续可能会支持「同时运行多个虚拟机」
     /// * 🚩多线程共享：输入/输出
-    runtime: Arc<Mutex<R>>,
+    pub(crate) runtime: ArcMutex<R>,
 
     /// 内部封装的「命令行参数」
     /// * 🎯用于从命令行中加载配置
     /// * 🚩只读
-    config: Arc<LaunchConfig>,
+    pub(crate) config: Arc<LaunchConfig>,
 
     /// 内部缓存的「NAVM输出」
     /// * 🎯用于NAL测试
     /// * 🚩多线程共享
-    output_cache: Arc<Mutex<OutputCache>>,
+    pub(crate) output_cache: ArcMutex<OutputCache>,
 }
 
 impl<R> RuntimeManager<R>
@@ -54,6 +58,7 @@ where
     R: VmRuntime + Send + Sync + 'static,
 {
     /// 构造函数
+    /// * 🎯由此接管虚拟机实例、配置的所有权
     pub fn new(runtime: R, config: LaunchConfig) -> Self {
         Self {
             runtime: Arc::new(Mutex::new(runtime)),
@@ -97,8 +102,8 @@ where
             }
         }
 
-        // 生成「Websocket服务」子线程
-        let thread_ws = self.spawn_ws_server()?;
+        // 生成「Websocket服务」子线程（若有连接）
+        let thread_ws = self.try_spawn_ws_server()?;
 
         // 生成「用户输入」子线程
         let mut thread_input = None;
@@ -111,7 +116,9 @@ where
         // 等待子线程结束，并抛出其抛出的错误
         // ! 🚩【2024-04-02 15:09:32】错误处理交给外界
         thread_read.join().transform_err(error_anyhow)??;
-        thread_ws.join().transform_err(error_anyhow)??;
+        if let Some(thread_ws) = thread_ws {
+            thread_ws.join().transform_err(error_anyhow)??
+        }
         if let Some(thread_input) = thread_input {
             thread_input.join().transform_err(error_anyhow)??;
         }
@@ -221,21 +228,15 @@ where
     }
 
     /// 生成「Websocket服务」子线程
-    pub fn spawn_ws_server(&mut self) -> Result<JoinHandle<Result<()>>> {
-        // 准备引用
-        let runtime_arc = self.runtime.clone();
+    pub fn try_spawn_ws_server(&mut self) -> Result<Option<JoinHandle<Result<()>>>> {
+        // 若有⇒启动
+        if let Some(config) = &self.config.websocket {
+            let thread = spawn_ws_server(self, &config.host, config.port);
+            return Ok(Some(thread));
+        }
 
-        // 启动线程
-        let thread = thread::spawn(move || {
-            loop {
-                // 尝试获取运行时引用 | 仅有其它地方panic了才会停止
-                let mut runtime = runtime_arc.lock().transform_err(error_anyhow)?;
-                // TODO: Websocket服务端逻辑
-            }
-        });
-
-        // 返回启动的线程
-        Ok(thread)
+        // 完成，即便没有启动
+        Ok(None)
     }
 
     /// 生成「用户输入」子线程
@@ -252,7 +253,7 @@ where
             // ! 📝不能在此中出现裸露的`MutexGuard`对象：其并非线程安全
             //   * ✅可使用`&(mut) *`重引用语法，从`MutexGuard`转换为线程安全的引用
             //   * ✅对`Arc`使用`&*`同理：可以解包成引用，以便后续统一传递值的引用
-            for io_result in ReadlineIter::default() {
+            for io_result in ReadlineIter::new("BabelNAR> ") {
                 // 从迭代器中读取一行
                 let line = io_result?;
 
@@ -318,7 +319,7 @@ where
             .inspect_err(|e| eprintln_cli!([Error] "NAVM指令执行错误：{e}"))
     }
 
-    /// 像NAVM实例输入NAL（输入）
+    /// 向NAVM实例输入NAL（输入）
     /// * 🎯预置、用户输入、Websocket输入
     /// * 🎯严格模式
     ///   * 📌要么是「有失败 + 非严格模式 ⇒ 仅报告错误」
@@ -362,7 +363,7 @@ where
 /// 重启虚拟机
 /// * 🚩消耗原先的虚拟机管理者，返回一个新的管理者
 ///   * 🚩【2024-04-02 20:25:21】目前对「终止先前虚拟机」持放松态度
-/// * 📝从`Arc<Mutex<T>>`中拿取值的所有权：[`Arc::try_unwrap`] + [`Mutex::into_inner`]
+/// * 📝从`ArcMutex<T>>`中拿取值的所有权：[`Arc::try_unwrap`] + [`Mutex::into_inner]
 ///   * 🔗参考：<https://users.rust-lang.org/t/move-out-of-arc-mutex-t/85940>
 pub fn restart_manager(
     manager: RuntimeManager<impl VmRuntime + Send + Sync>,

@@ -82,6 +82,7 @@ pub struct LaunchConfig {
     pub command: Option<LaunchConfigCommand>,
 
     /// Websocket参数（可选）
+    /// * 🚩【2024-04-03 18:21:00】目前对客户端输出JSON
     pub websocket: Option<LaunchConfigWebsocket>,
 
     /// 预置NAL（可选）
@@ -281,7 +282,7 @@ impl LaunchConfig {
     /// * 🚩合并逻辑：`Some(..)` => `None`
     ///   * 当并入者为`Some`，自身为`None`时，合并`Some`中的值
     /// * ✨对【内部含有可选键】的值，会**递归深入**
-    /// 
+    ///
     /// TODO: ❓启动时与运行时需要分开：不推荐直接覆盖布尔值
     pub fn merge_from(&mut self, other: &Self) {
         // 合并所有【不含可选键】的值

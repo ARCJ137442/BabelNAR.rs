@@ -99,12 +99,13 @@ impl OutputType<'_> {
             // CLI独有
             "DEBUG" => message.bright_blue(),
             "WARN" => message.bright_yellow(),
-            "LOG" => message.white(),
+            "LOG" => message.bright_black(),
             // NAVM输出
             "IN" | "OUT" => message.bright_white(),
             "EXE" => message.bright_cyan().reversed(),
             "ANSWER" | "ACHIEVED" => message.bright_green().reversed(),
-            "INFO" | "COMMENT" => message.white(),
+            "INFO" => message.cyan(),
+            "COMMENT" => message.white(),
             "ERROR" => message.red(),
             "TERMINATED" => message.bright_white().reversed().blink(),
             // ↓OpenNARS附加

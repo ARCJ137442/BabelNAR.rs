@@ -110,7 +110,7 @@ optional = true
 [features]
 
 ## 默认启用的特性 ##
-default = []
+default = [ "bundled" ] # * 默认启用所有（可选禁用）
 ## 大杂烩 ##
 bundled = [
     "cin_implements", # 各大CIN的NAVM实现
