@@ -2,6 +2,16 @@
 name = "babel_nar"
 version = "0.13.1"
 edition = "2021"
+description = """
+Implementation and application supports of the NAVM model
+"""
+
+readme = "README.md"
+keywords = ["NARS", "NAVM"]
+
+license = "MIT OR Apache-2.0"
+categories = [] # TODO
+repository = "https://github.com/ARCJ137442/BabelNAR.rs"
 
 # Cargo文档参考：<https://rustwiki.org/zh-CN/cargo/reference/manifest.html>
 
