@@ -44,7 +44,8 @@ impl VmRuntime for CommandVmRuntime {
         // 空⇒提前返回
         if_return! { input.is_empty() => Ok(()) }
         // 置入
-        self.process.put(input)
+        // * 🚩没有换行符
+        self.process.put_line(input)
     }
 
     fn fetch_output(&mut self) -> Result<Output> {

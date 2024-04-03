@@ -245,7 +245,7 @@ pub fn put_nal(
         // 检查是否有NAVM输出符合预期
         NALInput::ExpectContains(expectation) => {
             // 先尝试拉取所有输出到「输出缓存」
-            while let Ok(Some(output)) = vm.try_fetch_output() {
+            while let Some(output) = vm.try_fetch_output()? {
                 output_cache.put(output)?;
             }
             // 然后读取并匹配缓存

@@ -68,6 +68,9 @@ punct_sym = { (PUNCTUATION | SYMBOL) }
 /// * 🆕对ONA兼容形如`(^op, {SELF}, LEFT)`的输出语法
 /// * 🚩此处不进行「静默内联」：便于在「折叠函数」中向下分派
 /// * 📝使用前缀「$」停止忽略空格，以使用「可选分隔符」
+/// TODO: 【2024-04-03 11:50:06】对「像」可能需要特别的语法
+/// * 📄`[OUT] Derived: <{SELF} --> (^left /1 P)>. :|: occurrenceTime=21 Priority=0.301667 Truth: frequency=1.000000, confidence=0.810000`
+/// * 📄`[OUT] Derived: <P --> (^left /2 {SELF})>. :|`
 compound = !{
     compound_common
   | compound_binary

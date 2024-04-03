@@ -1,8 +1,9 @@
 {
     "description": "用于测试「预加载NAL输入」，加载「简单演绎推理」",
-    "autoRestart": true,
-    "userInput": false,
     "preludeNAL": {
         "file": "./src/tests/nal/test_simple_deduction.nal"
-    }
+    },
+    "userInput": false,
+    "autoRestart": false,
+    "strictMode": true
 }

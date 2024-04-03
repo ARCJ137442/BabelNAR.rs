@@ -7,7 +7,7 @@ use babel_nar::{
     eprintln_cli, println_cli,
     test_tools::{nal_format::parse, put_nal, VmOutputCache},
 };
-use nar_dev_utils::ResultBoost;
+use nar_dev_utils::{if_return, ResultBoost};
 use navm::{
     cmd::Cmd,
     output::Output,
@@ -16,7 +16,7 @@ use navm::{
 use std::{
     fmt::Debug,
     io::Result as IoResult,
-    ops::ControlFlow,
+    ops::{ControlFlow, ControlFlow::Break, ControlFlow::Continue},
     sync::{Arc, Mutex, MutexGuard},
     thread::{self, sleep, JoinHandle},
     time::Duration,
@@ -161,7 +161,7 @@ where
         }
     }
 
-    /// 在运行时启动后，对其进行管理
+    /// 【主函数】在运行时启动后，对其进行管理
     /// * 🎯健壮性：更多「警告/重来」而非`panic`
     /// * 🎯用户友好：尽可能隐藏底层内容
     ///   * 如错误堆栈
@@ -170,15 +170,21 @@ where
     ///   * 用户的运行时交互
     ///   * Websocket服务端
     /// * 🚩【2024-04-03 00:33:41】返回的[`Result`]作为程序的终止码
-    ///   * `Ok(Ok(..))` ⇒ 程序正常退出
-    ///   * `Ok(Err(..))` ⇒ 程序异常退出
+    ///   * `Ok(Ok(..))` ⇒ 程序正常终止
+    ///   * `Ok(Err(..))` ⇒ 程序异常终止
+    ///   * `Err(..)` ⇒ 程序异常中断
     pub fn manage(&mut self) -> Result<Result<()>> {
         // 生成「读取输出」子线程 | 📌必须最先
         let thread_read = self.spawn_read_output()?;
 
         // 预置输入 | ⚠️阻塞
-        if let Err(e) = self.prelude_nal() {
-            println_cli!([Error] "预置NAL输入发生错误：{e}")
+        let prelude_result = self.prelude_nal();
+        match prelude_result {
+            // 预置输入要求终止⇒终止
+            Break(result) => return Ok(result),
+            // 预置输入发生错误⇒展示 & 继续
+            Continue(Err(e)) => println_cli!([Error] "预置NAL输入发生错误：{e}"),
+            Continue(Ok(..)) => (),
         }
 
         // 虚拟机被终止 & 无用户输入 ⇒ 程序退出
@@ -215,31 +221,62 @@ where
 
     /// 预置NAL
     /// * 🎯用于自动化调取`.nal`文件进行测试
-    pub fn prelude_nal(&mut self) -> Result<()> {
+    /// * 🚩【2024-04-03 10:28:18】使用[`ControlFlow`]对象以控制「是否提前返回」和「返回的结果」
+    ///   * 📌[`Continue`] => 使用「警告&忽略」的方式处理[`Result`] => 继续（用户输入/Websocket服务端）
+    ///   * 📌[`Break`] => 告知调用者「需要提前结束」
+    ///     * 📌[`Break`]([`Ok`]) => 正常退出
+    ///     * 📌[`Break`]([`Err`]) => 异常退出（报错）
+    pub fn prelude_nal(&mut self) -> ControlFlow<Result<()>, Result<()>> {
         let config = &*self.config;
 
+        /// 尝试获取结果并返回
+        /// * 🎯对错误返回`Break(Err(错误))`而非`Err(错误)`
+        macro_rules! try_break {
+            // 统一逻辑
+            ($v:expr => $e_id:ident $e:expr) => {
+                match $v {
+                    // 获取成功⇒返回并继续
+                    Ok(v) => v,
+                    // 获取失败⇒ 告知「异常结束」
+                    Err($e_id) => return Break(Err($e)),
+                }
+            };
+            // 两种错误分派方法
+            ($v:expr) => { try_break!($v => e e.into()) };
+            (anyhow $v:expr) => { try_break!($v => e error_anyhow(e)) }; // * 🎯针对`PoisonError`
+        }
+
         // 尝试获取运行时引用 | 仅有其它地方panic了才会停止
-        let runtime = &mut *self.runtime.lock().transform_err(error_anyhow)?;
+        let runtime = &mut *try_break!(anyhow self.runtime.lock());
 
         // 仅在有预置NAL时开始
         if let Some(prelude_nal) = &config.prelude_nal {
             // 尝试获取输出缓冲区引用 | 仅有其它地方panic了才会停止
-            let output_cache = &mut *OutputCache::unlock_arc_mutex(&mut self.output_cache)?;
+            let output_cache =
+                &mut *try_break!(OutputCache::unlock_arc_mutex(&mut self.output_cache));
 
             // 读取内容
             let nal = match prelude_nal {
                 // 文件⇒尝试读取文件内容 | ⚠️此处创建了一个新值，所以要统一成`String`
-                LaunchConfigPreludeNAL::File(path) => std::fs::read_to_string(path)?,
+                LaunchConfigPreludeNAL::File(path) => try_break!(std::fs::read_to_string(path)),
                 // 纯文本⇒直接引入
                 LaunchConfigPreludeNAL::Text(nal) => nal.to_string(),
             };
 
-            // 输入NAL
-            Self::input_nal_to_vm(runtime, &nal, output_cache, config)
+            // 输入NAL并处理
+            // * 🚩【2024-04-03 11:10:44】遇到错误，统一上报
+            //   * 根据「严格模式」判断要「继续」还是「终止」
+            let put_result = Self::input_nal_to_vm(runtime, &nal, output_cache, config);
+            match self.config.strict_mode {
+                false => Continue(put_result),
+                true => Break(put_result),
+            }
         }
-
-        // 返回
-        Ok(())
+        // 否则自动返回「正常」
+        else {
+            // 返回 | 正常继续
+            Continue(Ok(()))
+        }
     }
 
     /// 生成「读取输出」子线程
@@ -268,11 +305,8 @@ where
                     .try_fetch_output()
                     .inspect_err(|e| eprintln_cli!([Error] "尝试拉取NAVM运行时输出时发生错误：{e}"))
                 {
-                    // 格式化输出
-                    // * 🚩可能还要交给Websocket
-                    println_cli!(&output);
-
                     // 缓存输出
+                    // * 🚩在缓存时格式化输出
                     match output_cache.lock() {
                         Ok(mut output_cache) => output_cache.put(output)?,
                         Err(e) => eprintln_cli!([Error] "缓存NAVM运行时输出时发生错误：{e}"),
@@ -372,48 +406,55 @@ where
             // NAL输入
             InputMode::Nal => Self::input_nal_to_vm(runtime, line, output_cache, config),
         }
-
-        // 输入完成
-        Ok(())
     }
 
     /// 像NAVM实例输入NAVM指令
-    fn input_cmd_to_vm(runtime: &mut R, line: &str) {
-        if let Ok(cmd) =
-            Cmd::parse(line).inspect_err(|e| eprintln_cli!([Error] "NAVM指令解析错误：{e}"))
-        {
-            let _ = runtime
-                .input_cmd(cmd)
-                .inspect_err(|e| eprintln_cli!([Error] "NAVM指令执行错误：{e}"));
-        }
+    fn input_cmd_to_vm(runtime: &mut R, line: &str) -> Result<()> {
+        let cmd =
+            Cmd::parse(line).inspect_err(|e| eprintln_cli!([Error] "NAVM指令解析错误：{e}"))?;
+        runtime
+            .input_cmd(cmd)
+            .inspect_err(|e| eprintln_cli!([Error] "NAVM指令执行错误：{e}"))
     }
 
     /// 像NAVM实例输入NAL（输入）
     /// * 🎯预置、用户输入、Websocket输入
+    /// * 🎯严格模式
+    ///   * 📌要么是「有失败 + 非严格模式 ⇒ 仅报告错误」
+    ///   * 📌要么是「有一个失败 + 严格模式 ⇒ 返回错误」
     /// * ⚠️可能有多行
     fn input_nal_to_vm(
         runtime: &mut R,
         input: &str,
         output_cache: &mut OutputCache,
         config: &LaunchConfig,
-    ) {
+    ) -> Result<()> {
         // 解析输入，并遍历解析出的每个NAL输入
         for input in parse(input) {
             // 尝试解析NAL输入
             match input {
+                // 错误⇒根据严格模式处理
+                Err(e) => {
+                    // 无论是否严格模式，都报告错误
+                    eprintln_cli!([Error] "解析NAL输入时发生错误：{e}");
+                    // 严格模式下提前返回
+                    if_return! { config.strict_mode => Err(e) }
+                }
                 Ok(nal) => {
                     // 尝试置入NAL输入 | 为了错误消息，必须克隆
-                    put_nal(runtime, nal.clone(), output_cache, config.user_input).unwrap_or_else(
-                        // TODO: 严格模式：预期失败时上报错误，乃至使整个程序运行失败
-                        |e| eprintln_cli!([Error] "置入NAL输入「{nal:?}」时发生错误：{e}"),
-                    );
+                    let put_result = put_nal(runtime, nal.clone(), output_cache, config.user_input);
+                    // 处理错误
+                    if let Err(e) = put_result {
+                        // 无论是否严格模式，都报告错误
+                        eprintln_cli!([Error] "置入NAL输入「{nal:?}」时发生错误：{e}");
+                        // 严格模式下提前返回
+                        if_return! { config.strict_mode => Err(e) }
+                    }
                 }
-                // 错误⇒报错
-                Err(e) => eprintln_cli!(
-                    [Error] "解析NAL输入时发生错误：{e}"
-                ),
             }
         }
+        // 正常返回
+        Ok(())
     }
 }
 

@@ -106,10 +106,18 @@ pub struct LaunchConfig {
     pub input_mode: InputMode,
 
     /// 自动重启
+    /// * 🎯程序健壮性：用户的意外输入，不会随意让程序崩溃
     /// * 🚩在虚拟机终止（收到「终止」输出）时，自动用配置重启虚拟机
     /// * 📜默认为`false`（关闭）
     #[serde(default = "bool_false")]
     pub auto_restart: bool,
+
+    /// 严格模式
+    /// * 🎯测试敏感性：测试中的「预期失败」可以让程序上报异常
+    /// * 🚩在虚拟机终止（收到「终止」输出）时，自动用配置重启虚拟机
+    /// * 📜默认为`false`（关闭）
+    #[serde(default = "bool_false")]
+    pub strict_mode: bool,
 }
 
 /// 布尔值`true`
@@ -140,6 +148,8 @@ impl Default for LaunchConfig {
             input_mode: InputMode::default(),
             // 不自动重启
             auto_restart: false,
+            // 不开启严格模式
+            strict_mode: false,
         }
     }
 }
@@ -280,6 +290,7 @@ impl LaunchConfig {
         self.user_input = other.user_input;
         self.input_mode = other.input_mode;
         self.auto_restart = other.auto_restart;
+        self.strict_mode = other.strict_mode;
         // 递归合并所有【含有可选键】的值
         LaunchConfigCommand::merge_as_key(&mut self.command, &other.command);
     }
