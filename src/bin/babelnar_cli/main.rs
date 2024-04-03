@@ -17,7 +17,7 @@ use std::{env, path::PathBuf};
 
 nar_dev_utils::mods! {
     // 启动参数
-    use launch_config;
+    use vm_config;
     // 命令行解析
     use arg_parse;
     // 从参数启动
@@ -44,18 +44,18 @@ pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) ->
     // 解析命令行参数
     let args = CliArgs::parse_from(args);
     // 读取配置 | with 默认配置文件
-    let mut config = load_config(&args, DEFAULT_CONFIG_PATH);
+    let mut config = load_config(&args);
     // 用户填充配置项
     polyfill_config_from_user(&mut config);
     // 从配置项启动 | 复制一个新配置，不会附带任何非基础类型开销
-    let runtime = match launch_by_config(config.clone()) {
+    let (runtime, config) = match launch_by_config(config.clone()) {
         // 启动成功⇒返回
-        Ok(runtime) => runtime,
+        Ok((r, c)) => (r, c),
         // 启动失败⇒打印错误信息，等待并退出
         Err(e) => {
             println_cli!([Error] "NARS运行时启动错误：{e}");
             // 启用用户输入时延时提示
-            if config.user_input {
+            if let Some(true) = config.user_input {
                 println_cli!([Info] "程序将在 3 秒后自动退出。。。");
                 sleep(Duration::from_secs(3));
             }
@@ -90,14 +90,9 @@ mod tests {
         // 以默认参数启动
         main_args(
             env::current_dir(),
-            [
-                "test.exe",
-                "-d",
-                "-c",
-                "./src/tests/cli/config/test_ona.json",
-            ]
-            .into_iter()
-            .map(str::to_string),
+            ["test.exe", "-d", "-c", "./src/tests/cli/config/test_ona"]
+                .into_iter()
+                .map(str::to_string),
         )
     }
 
@@ -114,7 +109,7 @@ mod tests {
                 "-d",
                 // 第一个文件，指示ONA
                 "-c",
-                "./src/tests/cli/config/test_ona.json",
+                "./src/tests/cli/config/test_ona",
                 // 第二个文件，指示预加载
                 "-c",
                 prelude_config_path,
@@ -126,12 +121,12 @@ mod tests {
 
     #[test]
     pub fn test_ona_prelude_de() -> Result<()> {
-        main_ona_prelude("./src/tests/cli/config/test_prelude_simple_deduction.json")
+        main_ona_prelude("./src/tests/cli/config/test_prelude_simple_deduction")
     }
 
     #[test]
     pub fn test_ona_prelude_op() -> Result<()> {
-        main_ona_prelude("./src/tests/cli/config/test_prelude_operation.json")
+        main_ona_prelude("./src/tests/cli/config/test_prelude_operation")
     }
     /// 测试入口/ONA/交互shell
     /// * 🎯正常BabelNAR CLI shell启动
@@ -146,9 +141,9 @@ mod tests {
                 "test.exe",
                 "-d",
                 "-c",
-                "./src/tests/cli/config/test_ona.json",
+                "./src/tests/cli/config/test_ona",
                 "-c",
-                "./src/tests/cli/config/websocket.json",
+                "./src/tests/cli/config/websocket",
             ]
             .into_iter()
             .map(str::to_string),

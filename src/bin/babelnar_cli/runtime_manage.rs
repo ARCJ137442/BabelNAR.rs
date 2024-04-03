@@ -1,7 +1,7 @@
 //! 启动后运行时的（交互与）管理
 
 use super::websocket_server::*;
-use crate::{launch_by_config, InputMode, LaunchConfig, LaunchConfigPreludeNAL};
+use crate::{launch_by_runtime_config, InputMode, LaunchConfigPreludeNAL, RuntimeConfig};
 use anyhow::{anyhow, Result};
 use babel_nar::{
     cli_support::{
@@ -45,7 +45,7 @@ where
     /// 内部封装的「命令行参数」
     /// * 🎯用于从命令行中加载配置
     /// * 🚩只读
-    pub(crate) config: Arc<LaunchConfig>,
+    pub(crate) config: Arc<RuntimeConfig>,
 
     /// 内部缓存的「NAVM输出」
     /// * 🎯用于NAL测试
@@ -59,7 +59,7 @@ where
 {
     /// 构造函数
     /// * 🎯由此接管虚拟机实例、配置的所有权
-    pub fn new(runtime: R, config: LaunchConfig) -> Self {
+    pub fn new(runtime: R, config: RuntimeConfig) -> Self {
         Self {
             runtime: Arc::new(Mutex::new(runtime)),
             config: Arc::new(config),
@@ -253,7 +253,8 @@ where
             // ! 📝不能在此中出现裸露的`MutexGuard`对象：其并非线程安全
             //   * ✅可使用`&(mut) *`重引用语法，从`MutexGuard`转换为线程安全的引用
             //   * ✅对`Arc`使用`&*`同理：可以解包成引用，以便后续统一传递值的引用
-            for io_result in ReadlineIter::new("BabelNAR> ") {
+            // ! 不建议在此启用提示词：会被异步的输出所打断
+            for io_result in ReadlineIter::default() {
                 // 从迭代器中读取一行
                 let line = io_result?;
 
@@ -298,7 +299,7 @@ where
     pub fn input_line_to_vm(
         runtime: &mut R,
         line: &str,
-        config: &LaunchConfig,
+        config: &RuntimeConfig,
         output_cache: &mut OutputCache,
     ) -> Result<()> {
         // 向运行时输入
@@ -329,7 +330,7 @@ where
         runtime: &mut R,
         input: &str,
         output_cache: &mut OutputCache,
-        config: &LaunchConfig,
+        config: &RuntimeConfig,
     ) -> Result<()> {
         // 解析输入，并遍历解析出的每个NAL输入
         for input in parse(input) {
@@ -383,7 +384,7 @@ pub fn restart_manager(
 
     // 启动新的虚拟机
     let config_ref = &*manager.config;
-    let new_runtime = launch_by_config(config_ref.clone())?;
+    let new_runtime = launch_by_runtime_config(config_ref)?;
     let new_manager = RuntimeManager::new(new_runtime, config_ref.clone());
 
     // 返回
@@ -393,7 +394,7 @@ pub fn restart_manager(
 /// 根据配置（的「是否重启」选项）管理（一系列）虚拟机实例
 pub fn loop_manage(
     mut manager: RuntimeManager<impl VmRuntime + Send + Sync>,
-    config: &LaunchConfig,
+    config: &RuntimeConfig,
 ) -> Result<()> {
     match manager.manage() {
         // 返回了「结果」⇒解包并传递结果

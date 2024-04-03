@@ -1,6 +1,8 @@
 //! 用于从「启动参数」启动NAVM运行时
 
-use crate::{read_config_extern, LaunchConfig, LaunchConfigCommand, LaunchConfigTranslators};
+use crate::{
+    read_config_extern, LaunchConfig, LaunchConfigCommand, LaunchConfigTranslators, RuntimeConfig,
+};
 use anyhow::{anyhow, Result};
 use babel_nar::{
     cin_implements::{
@@ -13,6 +15,7 @@ use babel_nar::{
         CommandVm, OutputTranslator,
     },
 };
+use nar_dev_utils::pipe;
 use navm::{
     cmd::Cmd,
     output::Output,
@@ -53,17 +56,33 @@ pub fn polyfill_config_from_user(config: &mut LaunchConfig) {
 }
 
 /// 从「启动参数」中启动
-/// * 🚩默认所有参数都经过确认
-pub fn launch_by_config(config: LaunchConfig) -> Result<impl VmRuntime> {
+/// * 🚩在转换中确认参数
+/// * ⚙️返回(启动后的运行时, 转换后的『运行时配置』)
+/// * ❌无法使用`impl TryInto<RuntimeConfig>`统一「启动参数」与「运行参数」
+///   * 📌即便：对于「运行时参数」，[`TryInto::try_into`]始终返回自身
+///   * 📝然而：对自身的[`TryInto`]错误类型总是[`std::convert::Infallible`]
+///   * ❗错误类型不一致，无法统一返回
+pub fn launch_by_config(
+    config: impl TryInto<RuntimeConfig, Error = anyhow::Error>,
+) -> Result<(impl VmRuntime, RuntimeConfig)> {
+    // 转换启动配置
+    let config: RuntimeConfig = config.try_into()?;
+
     // 生成虚拟机
-    let config_command = config.command.ok_or_else(|| anyhow!("缺少启动命令"))?;
+    let runtime = launch_by_runtime_config(&config)?;
+
+    // 返回
+    Ok((runtime, config))
+}
+
+pub fn launch_by_runtime_config(config: &RuntimeConfig) -> Result<impl VmRuntime> {
+    // 生成虚拟机
+    let config_command = &config.command;
     let mut vm = load_command_vm(config_command)?;
 
     // 配置虚拟机
-    if let Some(translators) = config.translators {
-        // 因为配置函数的设计，此处要暂时借用所有权
-        config_launcher_translators(&mut vm, &translators)?;
-    }
+    // * 🚩【2024-04-04 03:17:43】现在「转译器」成了必选项，所以必定会有配置
+    config_launcher_translators(&mut vm, &config.translators)?;
 
     // 启动虚拟机
     let runtime = vm.launch()?;
@@ -72,14 +91,21 @@ pub fn launch_by_config(config: LaunchConfig) -> Result<impl VmRuntime> {
 
 /// 从「启动参数/启动命令」启动「命令行虚拟机」
 /// * ❓需要用到「具体启动器实现」吗
-pub fn load_command_vm(config: LaunchConfigCommand) -> Result<CommandVm> {
+pub fn load_command_vm(config: &LaunchConfigCommand) -> Result<CommandVm> {
+    // 构造指令
     let command = generate_command(
-        config.cmd,
-        config.current_dir,
-        // ↓此处`unwrap_or_default`默认使用一个空数组作为迭代器
-        config.cmd_args.unwrap_or_default().into_iter().by_ref(),
+        &config.cmd,
+        config.current_dir.as_ref(),
+        // 🚩获取其内部数组的引用，或使用一个空数组作迭代器（无法简化成[`unwrap_or`]）
+        match &config.cmd_args {
+            Some(v) => v.iter(),
+            // ↓此处`unwrap_or_default`默认使用一个空数组作为迭代器
+            None => [].iter(),
+        },
     );
+    // 构造虚拟机
     let vm = command.into();
+    // 返回
     Ok(vm)
 }
 
@@ -92,12 +118,13 @@ pub fn config_launcher_translators(
     vm: &mut CommandVm,
     config: &LaunchConfigTranslators,
 ) -> Result<()> {
-    // 获取转译器
-    let translators = get_translator_by_name(config)?;
-    // 设置转译器
-    vm.translators(translators);
-    // 返回成功
-    Ok(())
+    Ok(pipe! {
+        // 获取转译器
+        get_translator_by_name(config) => {?}#
+        // 设置转译器
+        => [vm.translators](_)
+        // 返回成功
+    })
 }
 
 /// 从「转译器名」检索「输入输出转译器」

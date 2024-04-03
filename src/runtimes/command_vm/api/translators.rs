@@ -3,7 +3,7 @@
 //! * ✨特制结构
 //! * ✨特有错误类型
 
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use navm::{cmd::Cmd, output::Output};
 use std::error::Error;
 use thiserror::Error;

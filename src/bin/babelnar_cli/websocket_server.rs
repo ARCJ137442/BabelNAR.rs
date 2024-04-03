@@ -2,7 +2,7 @@
 //! * 🎯为BabelNAR CLI实现Websocket IO
 //! * 🎯实现专有的Websocket服务端逻辑
 
-use crate::{LaunchConfig, RuntimeManager};
+use crate::{RuntimeConfig, RuntimeManager};
 use anyhow::Result;
 use babel_nar::{
     cli_support::io::{
@@ -72,7 +72,7 @@ where
     pub(crate) runtime: ArcMutex<R>,
 
     /// 所涉及的运行时配置
-    pub(crate) config: Arc<LaunchConfig>,
+    pub(crate) config: Arc<RuntimeConfig>,
 
     /// 所涉及的运行时
     pub(crate) output_cache: ArcMutex<OutputCache>,
@@ -166,7 +166,7 @@ where
     pub(crate) runtime: ArcMutex<R>,
 
     /// 所涉及的虚拟机配置
-    pub(crate) config: Arc<LaunchConfig>,
+    pub(crate) config: Arc<RuntimeConfig>,
 
     /// 所涉及的输出缓存
     pub(crate) output_cache: ArcMutex<OutputCache>,

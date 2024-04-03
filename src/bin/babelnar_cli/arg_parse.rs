@@ -1,15 +1,14 @@
 //! BabelNAR CLI的命令行（参数 & 配置）解析支持
 //! * ⚠️【2024-04-01 14:31:09】特定于二进制crate，目前不要并入[`babel_nar`]
+//! * 🚩【2024-04-04 03:03:58】现在移出所有与「启动配置」相关的逻辑到[`super::vm_config`]
 
-use crate::launch_config::LaunchConfig;
-use anyhow::Result;
+use crate::{load_config_extern, read_config_extern, LaunchConfig};
 use babel_nar::println_cli;
 use clap::Parser;
-use nar_dev_utils::{pipe, ResultBoost};
-use std::{fs::read_to_string, path::PathBuf};
-
-/// 默认的「外部JSON」路径
-pub const DEFAULT_CONFIG_PATH: &str = "BabelNAR.launch.json";
+use std::{
+    env::{current_dir, current_exe},
+    path::PathBuf,
+};
 
 /// 基于[`clap`]的命令行参数数据
 // 配置命令行解析器
@@ -43,25 +42,59 @@ pub struct CliArgs {
     // ! 🚩【2024-04-02 11:36:18】目前除了「配置加载」外，莫将任何「NAVM实现特定，可以内置到『虚拟机配置』的字段放这儿」
 }
 
+/// 默认的「启动配置」关键词
+/// * 🎯在「自动追加扩展名」的机制下，可以进行自动补全
+/// * 🚩【2024-04-04 05:28:45】目前仍然难以直接在[`PathBuf`]中直接追加字符串
+///   * 多词如`BabelNAR-launch`需要使用`-`而非`.`：后者会被识别为「`.launch`扩展名」，导致无法进行「自动补全」
+pub const DEFAULT_CONFIG_KEYWORD: &str = "BabelNAR-launch";
+
+/// 获取「默认启动配置」文件
+/// * 🎯更灵活地寻找可用的配置文件
+///   * exe当前目录下 | 工作目录下
+///   * `BabelNAR.launch.(h)json`
+pub fn try_load_default_config() -> Option<LaunchConfig> {
+    // 检查一个目录
+    #[inline(always)]
+    fn in_one_root(root: PathBuf) -> Option<LaunchConfig> {
+        // 计算路径：同目录下
+        let path = match root.is_dir() {
+            true => root.join(DEFAULT_CONFIG_KEYWORD),
+            false => root.with_file_name(DEFAULT_CONFIG_KEYWORD),
+        };
+        // 尝试读取，静默失败
+        read_config_extern(&path).ok()
+    }
+    // 寻找第一个可用的配置文件
+    [current_dir(), current_exe()]
+        // 转换为迭代器
+        .into_iter()
+        // 筛去转换失败的
+        .flatten()
+        // 尝试获取其中的一个有效配置，然后（惰性）返回「有效配置」
+        .filter_map(in_one_root)
+        // 只取第一个（最先遍历的根路径优先）
+        .next()
+}
+
 /// 加载配置
 /// * 🚩按照一定优先级顺序进行覆盖（从先到后）
 ///   * 命令行参数中指定的配置文件
-///   * 默认的JSON文件 | 可以在`disable_default = true`的情况下传入任意字串作占位符
-pub fn load_config(args: &CliArgs, default_config_path: impl Into<PathBuf>) -> LaunchConfig {
+///   * 默认配置文件路径 | 可以在`disable_default = true`的情况下传入任意字串作占位符
+pub fn load_config(args: &CliArgs) -> LaunchConfig {
     // 构建返回值 | 全`None`
     let mut result = LaunchConfig::new();
     // 尝试从命令行参数中读取再合并配置 | 仅提取出其中`Some`的项
     args.config
         // 尝试加载配置文件，对错误采取「警告并抛掉」的策略
         .iter()
+        .map(PathBuf::as_ref)
         .filter_map(load_config_extern)
         // 逐个从「命令行参数指定的配置文件」中合并
         .for_each(|config| result.merge_from(&config));
     // 若未禁用，尝试读取再合并默认启动配置
     if !args.disable_default {
         // * 🚩读取失败⇒警告&无动作 | 避免多次空合并
-        load_config_extern(&default_config_path.into())
-            .inspect(|config_extern| result.merge_from(config_extern));
+        try_load_default_config().inspect(|config_extern| result.merge_from(config_extern));
     }
     // 展示加载的配置 | 以便调试（以防其它地方意外插入别的配置）
     match serde_json::to_string(&result) {
@@ -70,55 +103,6 @@ pub fn load_config(args: &CliArgs, default_config_path: impl Into<PathBuf>) -> L
     }
     // 返回
     result
-}
-
-/// 从外部JSON文件中加载启动配置
-/// * 🎯错误处理 & 错误⇒空置
-/// * 🚩在遇到错误时会发出警告
-pub fn load_config_extern(path: &PathBuf) -> Option<LaunchConfig> {
-    // Ok⇒Some，Err⇒警告+None
-    read_config_extern(path).ok_or_run(|e| {
-        // 根据错误类型进行分派
-        if let Some(e) = e.downcast_ref::<std::io::Error>() {
-            match e.kind() {
-                std::io::ErrorKind::NotFound => {
-                    println_cli!([Warn] "未找到外部配置，使用空配置……");
-                }
-                _ => println_cli!([Warn] "读取外部配置时出现预期之外的错误: {}", e),
-            }
-        } else if let Some(e) = e.downcast_ref::<serde_json::Error>() {
-            match e.classify() {
-                serde_json::error::Category::Syntax => {
-                    println_cli!([Warn] "外部配置文件格式错误，使用空配置……");
-                }
-                _ => println_cli!([Warn] "解析外部配置时出现预期之外的错误: {}", e),
-            }
-        } else {
-            println_cli!([Warn] "加载外部配置时出现预期之外的错误: {}", e)
-        }
-        // 空置
-    })
-}
-
-/// 从外部JSON文件中读取启动配置
-/// * 🎯仅涉及具体读取逻辑，不涉及错误处理
-pub fn read_config_extern(path: &PathBuf) -> Result<LaunchConfig> {
-    // 尝试读取外部启动配置，并尝试解析
-    pipe! {
-        path
-        // 尝试读取文件内容
-        => read_to_string
-        => {?}#
-        // 尝试解析JSON配置
-        => #{&}
-        => LaunchConfig::from_json_str
-        => {?}#
-        // 返回Ok（转换为`anyhow::Result`）
-        => Ok
-    }
-    // ! 若需使用`confy`，必须封装
-    // * 🚩目前无需使用`confy`：可以自动创建配置文件，但个人希望其路径与exe同目录
-    // Ok(confy::load_path(path)?) // ! 必须封装
 }
 
 /// 单元测试
@@ -170,15 +154,15 @@ mod tests {
         #[test]
         fn test_arg_parse() {
             test_arg_parse! {
-                ["-c", "./src/tests/cli/config/opennars.json"]
+                ["-c", "./src/tests/cli/config/opennars"]
                 => CliArgs {
-                    config: vec!["./src/tests/cli/config/opennars.json".into()],
+                    config: vec!["./src/tests/cli/config/opennars".into()],
                     ..Default::default()
                 };
                 // 多个配置：重复使用`-c`/`--config`，按使用顺序填充
-                ["-c", "1.json", "--config", "2.json"]
+                ["-c", "1", "--config", "2"]
                 => CliArgs {
-                    config: vec!["1.json".into(), "2.json".into()],
+                    config: vec!["1".into(), "2".into()],
                     ..Default::default()
                 };
                 // 禁用默认配置：使用`-d`/`--disable-default`
@@ -195,20 +179,21 @@ mod tests {
             fail_缺少参数 test_arg_parse!(["-c"]);
             fail_参数名不对 test_arg_parse!(["--c"]);
             fail_缺少参数2 test_arg_parse!(["--config"]);
-            多个参数没各自前缀 test_arg_parse!(["-c", "1.json", "2.json"]);
+            多个参数没各自前缀 test_arg_parse!(["-c", "1", "2"]);
         }
     }
 
     /// 测试/加载配置
     mod read_config {
         use super::*;
+        use crate::vm_config::*;
         use crate::LaunchConfigWebsocket;
 
         /// 测试/加载配置
         fn load(args: &[&str]) -> LaunchConfig {
             // 读取配置 | 自动填充第一个命令行参数作为「当前程序路径」
             let args = CliArgs::parse_from([&["test.exe"], args].concat());
-            let config = load_config(&args, DEFAULT_CONFIG_PATH);
+            let config = load_config(&args);
             dbg!(config)
         }
 
@@ -229,47 +214,88 @@ mod tests {
         fn test() {
             // 成功测试
             test! {
-                // 单个配置文件
-                ["-c" "src/tests/cli/config/opennars.json" "-d"] => LaunchConfig {
-                    translators: Some(
-                        crate::LaunchConfigTranslators::Same(
-                            "opennars".into(),
+                    // 单个配置文件
+                    ["-c" "src/tests/cli/config/opennars" "-d"] => LaunchConfig {
+                        translators: Some(
+                            LaunchConfigTranslators::Same(
+                                "opennars".into(),
+                            ),
                         ),
-                    ),
-                    command: None,
-                    websocket: None,
-                    prelude_nal: None,
-                    ..Default::default()
-                };
-                ["-c" "src/tests/cli/config/websocket.json" "-d"] => LaunchConfig {
-                    translators: None,
-                    command: None,
-                    websocket: Some(LaunchConfigWebsocket {
-                        host: "localhost".into(),
-                        port: 8080,
-                    }),
-                    prelude_nal: None,
-                    ..Default::default()
-                };
-                // 两个配置文件合并
-                [
-                    "-d"
-                    "-c" "src/tests/cli/config/opennars.json"
-                    "-c" "src/tests/cli/config/websocket.json"
-                ] => LaunchConfig {
-                    translators: Some(
-                        crate::LaunchConfigTranslators::Same(
-                            "opennars".into(),
+                        command: Some(LaunchConfigCommand {
+                            cmd: "java".into(),
+                            cmd_args: Some(vec![
+                                "-Xmx1024m".into(),
+                                "-jar".into(),
+                                "nars.jar".into()
+                            ]),
+                            current_dir: Some("root/nars/test".into()),
+                        }),
+                        ..Default::default()
+                    };
+                    ["-c" "src/tests/cli/config/websocket" "-d"] => LaunchConfig {
+                        websocket: Some(LaunchConfigWebsocket {
+                            host: "localhost".into(),
+                            port: 8080,
+                        }),
+                        ..Default::default()
+                    };
+                    // 两个配置文件合并
+                    [
+                        "-d"
+                        "-c" "src/tests/cli/config/opennars"
+                        "-c" "src/tests/cli/config/websocket"
+                    ] => LaunchConfig {
+                        translators: Some(
+                            LaunchConfigTranslators::Same(
+                                "opennars".into(),
+                            ),
                         ),
-                    ),
-                    command: None,
-                    websocket: Some(LaunchConfigWebsocket {
-                        host: "localhost".into(),
-                        port: 8080,
-                    }),
-                    prelude_nal: None,
-                    ..Default::default()
-                }
+                        command: Some(LaunchConfigCommand {
+                            cmd: "java".into(),
+                            cmd_args: Some(vec![
+                                "-Xmx1024m".into(),
+                                "-jar".into(),
+                                "nars.jar".into()
+                            ]),
+                            current_dir: Some("root/nars/test".into()),
+                        }),
+                        websocket: Some(LaunchConfigWebsocket {
+                            host: "localhost".into(),
+                            port: 8080,
+                        }),
+                        ..Default::default()
+                    };
+                    // 三个配置文件合并
+                    [
+                        "-d"
+                        "-c" "src/tests/cli/config/opennars"
+                        "-c" "src/tests/cli/config/websocket"
+                        "-c" "src/tests/cli/config/test_prelude_simple_deduction"
+                    ] => LaunchConfig {
+                        translators: Some(
+                            LaunchConfigTranslators::Same(
+                                "opennars".into(),
+                            ),
+                        ),
+                        command: Some(LaunchConfigCommand {
+                            cmd: "java".into(),
+                            cmd_args: Some(vec![
+                                "-Xmx1024m".into(),
+                                "-jar".into(),
+                                "nars.jar".into()
+                            ]),
+                            current_dir: Some("root/nars/test".into()),
+                        }),
+                        websocket: Some(LaunchConfigWebsocket {
+                            host: "localhost".into(),
+                            port: 8080,
+                        }),
+                        prelude_nal: Some(LaunchConfigPreludeNAL::File("./src/tests/nal/test_simple_deduction.nal".into())),
+                        user_input: Some(false),
+                        auto_restart: Some(false),
+                        strict_mode: Some(true),
+                        ..Default::default()
+                    }
             }
         }
     }

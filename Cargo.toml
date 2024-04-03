@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.14.1"
+version = "0.15.0"
 edition = "2021"
 description = """
 Implementation and application supports of the NAVM model
@@ -85,7 +85,7 @@ optional = true
 version = "2.1.0"
 optional = true
 
-# 命令行支持/JSON配置解析
+# 命令行支持/(H)JSON配置解析
 [dependencies.serde]
 version = "1.0.197"
 optional = true
@@ -93,6 +93,10 @@ features = ["derive"]
 
 [dependencies.serde_json]
 version = "1.0.115"
+optional = true
+
+[dependencies.deser-hjson]
+version = "2.2.4"
 optional = true
 
 # 命令行支持/Websocket服务

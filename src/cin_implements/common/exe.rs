@@ -6,6 +6,7 @@
 //!   * ❗没必要使用新的数据结构
 
 use crate::runtimes::{CommandVm, IoTranslators};
+use nar_dev_utils::manipulate;
 use std::{ffi::OsStr, path::Path, process::Command};
 
 /// 根据配置统一生成[`Command`]对象
@@ -39,5 +40,8 @@ where
 
 /// 根据「输入输出转译器」构建[`CommandVm`]对象
 pub fn generate_command_vm(command: Command, translators: impl Into<IoTranslators>) -> CommandVm {
-    CommandVm::from(command).translators(translators)
+    manipulate!(
+        CommandVm::from(command)
+        => .translators(translators)
+    )
 }

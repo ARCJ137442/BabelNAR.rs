@@ -1,0 +1,11 @@
+// TODO: 待完成
+{
+    translators: pynars
+    command: {
+        cmd: ../../NARS-executables/NAR.exe
+        cmdArgs: [
+            shell
+        ]
+    }
+    autoRestart: true
+}

@@ -1,0 +1,12 @@
+#hjson
+// * 🎯对接Matriangle服务器
+//   * ✨兼容旧BabelNAR与Matriangle的Websocket交互逻辑
+{
+    // Websocket服务端地址
+    websocket: {
+        host: localhost
+        port: 8765
+    }
+    // 【2024-04-04 04:49:32】Matriangle环境目前以「NAVM指令」的形式传入
+    inputMode: cmd
+}

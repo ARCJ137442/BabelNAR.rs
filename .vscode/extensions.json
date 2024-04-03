@@ -4,6 +4,9 @@
         "nyxiative.rust-and-friends",
         "itsyaasir.rust-feature-toggler",
         "rust-lang.rust-analyzer",
-        "aaron-bond.better-comments"
+        "aaron-bond.better-comments",
+        "laktak.hjson",
+        "tanh.hjson-formatter",
+        "pkief.material-icon-theme"
     ]
 }

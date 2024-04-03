@@ -1,8 +1,0 @@
-{
-    "description": "对接Matriangle服务器，兼容旧BabelNAR与Matriangle的Websocket交互逻辑",
-    "websocket": {
-        "host": "localhost",
-        "port": 8765
-    },
-    "inputMode": "cmd"
-}

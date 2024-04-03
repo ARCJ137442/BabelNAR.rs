@@ -1,0 +1,21 @@
+#hjson
+// * 用于测试「预加载NAL输入」，加载「简单演绎推理」
+{
+    // 转译器
+    translators: "opennars"
+    // 启动命令
+    command: {
+        // 命令：启动java运行时
+        cmd: "java"
+        // 传入的命令参数
+        cmdArgs: [
+            // 设置最大堆内存为1024M
+            "-Xmx1024m"
+            // 启动jar包
+            -jar
+            nars.jar
+        ]
+        // 启动时的工作目录
+        currentDir: root/nars/test
+    }
+}

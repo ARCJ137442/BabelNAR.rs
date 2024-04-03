@@ -52,13 +52,12 @@ impl CommandVm {
     }
 
     /// 配置/输入输出转译器组
-    pub fn translators(mut self, translators: impl Into<IoTranslators>) -> Self {
+    pub fn translators(&mut self, translators: impl Into<IoTranslators>) {
         // 一次实现俩
         let translators = translators.into();
         // 直接赋值
         self.input_translator = Some(translators.input_translator);
         self.output_translator = Some(translators.output_translator);
-        self
     }
 }
 
