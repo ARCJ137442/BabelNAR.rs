@@ -2,7 +2,6 @@
 //! * ✨终端美化相关
 //!
 
-
 util::mods! {
     // 输出打印
     pub output_print;
@@ -12,4 +11,7 @@ util::mods! {
 
     // NAVM输出缓存
     pub navm_output_cache;
+
+    // Websocket支持
+    pub websocket;
 }

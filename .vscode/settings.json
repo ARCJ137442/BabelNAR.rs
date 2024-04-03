@@ -2,6 +2,7 @@
     "rust-analyzer.cargo.features": "all",
     "editor.formatOnSave": true,
     "cSpell.words": [
+        "Addrs",
         "confy",
         "cxin",
         "Errno",

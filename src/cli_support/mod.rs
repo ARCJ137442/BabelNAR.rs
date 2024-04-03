@@ -5,6 +5,7 @@
 util::mods! {
     // CIN搜索
     pub cin_search;
+
     // 输入输出
     pub io;
 }
