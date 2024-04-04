@@ -97,7 +97,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             description: content_raw,
         },
         // * 🚩利用OpenNARS常见输出「全大写」的特征，兼容「confirm」与「disappoint」
-        upper if head == upper => Output::UNCLASSIFIED {
+        upper if !head.is_empty() && head == upper => Output::UNCLASSIFIED {
             r#type: head.to_string(),
             content: content_raw,
             // 默认不捕获Narsese
@@ -112,7 +112,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
     Ok(output)
 }
 
-/// （ONA）从原始输出中解析Narsese
+/// （OpenNARS）从原始输出中解析Narsese
 /// * 🎯用于结合`#[cfg]`控制「严格模式」
 ///   * 🚩生产环境下「Narsese解析出错」仅打印错误信息
 #[cfg(not(test))]
@@ -122,7 +122,7 @@ pub fn parse_narsese_opennars(head: &str, tail: &str) -> Result<Option<Narsese>>
     Ok(try_parse_narsese(tail).ok_or_run(|e| println!("【{head}】在解析Narsese时出现错误：{e}")))
 }
 
-/// （ONA）从原始输出中解析Narsese
+/// （OpenNARS）从原始输出中解析Narsese
 /// * 🎯用于结合`#[cfg]`控制「严格模式」
 ///   * 🚩测试环境下「Narsese解析出错」会上抛错误
 #[cfg(test)]
@@ -142,7 +142,7 @@ pub fn parse_operation_opennars(tail: &str) -> Operation {
     let mut params = vec![];
 
     // 提取输出中的字符串
-    let c = r.captures(dbg!(tail));
+    let c = r.captures(tail);
     // let budget;
     let operator_name;
     let params_str;
