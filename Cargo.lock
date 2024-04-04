@@ -448,11 +448,15 @@ dependencies = [
 
 [[package]]
 name = "nar_dev_utils"
-version = "0.26.1"
+version = "0.26.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da4355b0bb0c70d4682624cf9405c3594fffcf655629ebfb7ac7631b9981835b"
 
 [[package]]
 name = "narsese"
-version = "0.12.1"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cbb48e37fc65a9d76f2ac9e097fd5b7391ef31e2591f6b1f6ad6c5ba9e68b14"
 dependencies = [
  "lazy_static",
  "nar_dev_utils",
@@ -460,7 +464,7 @@ dependencies = [
 
 [[package]]
 name = "navm"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "nar_dev_utils",

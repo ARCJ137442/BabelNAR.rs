@@ -7,10 +7,14 @@ Implementation and application supports of the NAVM model
 """
 
 readme = "README.md"
-keywords = ["NARS", "NAVM"]
+keywords = ["NARS", "Non-Axiomatic Reasoning", "NAVM"]
 
 license = "MIT OR Apache-2.0"
-categories = [] # TODO
+categories = [
+    "parser-implementations", # 解析器实现 | 各CIN方言
+    "development-tools", # 开发工具
+    "command-line-utilities", # CLI应用
+] # 🔗<https://crates.io/category_slugs>
 repository = "https://github.com/ARCJ137442/BabelNAR.rs"
 
 # Cargo文档参考：<https://rustwiki.org/zh-CN/cargo/reference/manifest.html>
@@ -24,9 +28,9 @@ anyhow = "1.0.81"
 
 [dependencies.nar_dev_utils]
 # 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`
-# version = "0.1.0" # ! 本地依赖可以不添加版本
+version = "0" # * ✅现已发布至`crates.io`
 # *🚩【2024-03-21 09:26:38】启用所有
-path = "../NAR-dev-util"
+# path = "../NAR-dev-util"
 # git = "https://github.com/ARCJ137442/NAR-dev-util"
 # ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
 features = [ "bundled" ] # 启用所有特性
@@ -34,7 +38,8 @@ features = [ "bundled" ] # 启用所有特性
 [dependencies.narsese]
 # ! 本地依赖可以不添加版本
 # 载入Narsese API，引入其中所有部分
-path = "../Narsese.rs"
+version = "0" # * ✅现已发布至`crates.io`
+# path = "../Narsese.rs"
 # git = "https://github.com/ARCJ137442/Narsese.rs"
 # ! 【2024-03-23 19:19:01】似乎Rust-Analyzer无法获取私有仓库数据
 features = [
@@ -162,7 +167,7 @@ openjunars = []
 # 命令行支持 #
 cli_support = [
     "colored", # 命令行io 彩色打印
-    "serde", "serde_json", # 配置文件解析
+    "serde", "serde_json", "deser-hjson", # 配置文件解析
     "ws", # 命令行io Websocket服务
     "clap" # 命令行参数解析
 ]
