@@ -140,6 +140,21 @@ pub struct LaunchConfig {
     pub strict_mode: Option<bool>,
 }
 
+/// 使用`const`常量存储「空启动配置」
+/// * 🎯用于启动配置的「判空」逻辑
+/// * ✅与此同时，实现了「有提醒的后期维护」
+///   * 📌后续若新增字段，此处会因「缺字段」立即报错
+const EMPTY_LAUNCH_CONFIG: LaunchConfig = LaunchConfig {
+    translators: None,
+    command: None,
+    websocket: None,
+    prelude_nal: None,
+    user_input: None,
+    input_mode: None,
+    auto_restart: None,
+    strict_mode: None,
+};
+
 /// NAVM虚拟机（运行时）运行时配置
 /// * 🎯没有任何非必要的空值
 /// * 🚩自[`LaunchConfig`]加载而来
@@ -337,6 +352,13 @@ impl LaunchConfig {
     /// * 🚩使用[`Default`]提供默认空数据
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// 判断配置是否为空
+    /// * 📌本质：判断字段是否全为[`None`]
+    /// * 🚩直接与「空配置」相匹配
+    pub fn is_empty(&self) -> bool {
+        self == &EMPTY_LAUNCH_CONFIG
     }
 
     /// （尝试）从(H)JSON字符串构造

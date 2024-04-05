@@ -97,9 +97,13 @@ pub fn load_config(args: &CliArgs) -> LaunchConfig {
         try_load_default_config().inspect(|config_extern| result.merge_from(config_extern));
     }
     // 展示加载的配置 | 以便调试（以防其它地方意外插入别的配置）
-    match serde_json::to_string(&result) {
-        Ok(json) => println_cli!([Log] "外部配置已加载：{json}",),
-        Err(e) => println_cli!([Warn] "展示加载的配置时出现预期之外的错误: {e}"),
+    if result.is_empty() {
+        println_cli!([Log] "未加载任何外部配置");
+    } else {
+        match serde_json::to_string(&result) {
+            Ok(json) => println_cli!([Log] "外部配置已加载：{json}",),
+            Err(e) => println_cli!([Warn] "展示加载的配置时出现预期之外的错误: {e}"),
+        }
     }
     // 返回
     result

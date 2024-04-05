@@ -1,13 +1,13 @@
 [package]
 name = "babel_nar"
-version = "0.15.1"
+version = "0.15.2"
 edition = "2021"
 description = """
 Implementation and application supports of the NAVM model
 """
 
 readme = "README.md"
-keywords = ["NARS", "Non-Axiomatic Reasoning", "NAVM"]
+keywords = ["NARS", "Non-Axiomatic-Reasoning", "NAVM"]
 
 license = "MIT OR Apache-2.0"
 categories = [
