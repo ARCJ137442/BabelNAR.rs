@@ -2,8 +2,8 @@
 // * 用于测试「预加载NAL输入」，加载「操作测试」
 {
     preludeNAL: {
-        // 预置的NAL测试文件
-        file: ./src/tests/nal/test_operation.nal
+        // 预置的NAL测试文件（相对配置文件自身）
+        file: ./../../nal/test_operation.nal
     }
     // 禁止用户输入
     userInput: false

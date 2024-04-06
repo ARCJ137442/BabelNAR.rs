@@ -79,6 +79,9 @@ pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) ->
 /// 单元测试
 #[cfg(test)]
 mod tests {
+    use self::vm_config::tests::test_config_paths::{
+        TEST_ONA, TEST_PRELUDE_OPERATION, TEST_PRELUDE_SIMPLE_DEDUCTION, TEST_WEBSOCKET,
+    };
     use super::*;
 
     /// 测试入口/ONA/交互shell
@@ -90,7 +93,7 @@ mod tests {
         // 以默认参数启动
         main_args(
             env::current_dir(),
-            ["test.exe", "-d", "-c", "./src/tests/cli/config/test_ona"]
+            ["test.exe", "-d", "-c", TEST_ONA]
                 .into_iter()
                 .map(str::to_string),
         )
@@ -109,7 +112,7 @@ mod tests {
                 "-d",
                 // 第一个文件，指示ONA
                 "-c",
-                "./src/tests/cli/config/test_ona",
+                TEST_ONA,
                 // 第二个文件，指示预加载
                 "-c",
                 prelude_config_path,
@@ -119,15 +122,18 @@ mod tests {
         )
     }
 
+    /// 测试/预加载NAL：简单演绎推理
     #[test]
     pub fn test_ona_prelude_de() -> Result<()> {
-        main_ona_prelude("./src/tests/cli/config/test_prelude_simple_deduction")
+        main_ona_prelude(TEST_PRELUDE_SIMPLE_DEDUCTION)
     }
 
+    /// 测试/预加载NAL：操作
     #[test]
     pub fn test_ona_prelude_op() -> Result<()> {
-        main_ona_prelude("./src/tests/cli/config/test_prelude_operation")
+        main_ona_prelude(TEST_PRELUDE_OPERATION)
     }
+
     /// 测试入口/ONA/交互shell
     /// * 🎯正常BabelNAR CLI shell启动
     /// * 🎯正常用户命令行交互体验
@@ -137,16 +143,9 @@ mod tests {
         // 以默认参数启动
         main_args(
             env::current_dir(),
-            [
-                "test.exe",
-                "-d",
-                "-c",
-                "./src/tests/cli/config/test_ona",
-                "-c",
-                "./src/tests/cli/config/websocket",
-            ]
-            .into_iter()
-            .map(str::to_string),
+            ["test.exe", "-d", "-c", TEST_ONA, "-c", TEST_WEBSOCKET]
+                .into_iter()
+                .map(str::to_string),
         )
     }
 }

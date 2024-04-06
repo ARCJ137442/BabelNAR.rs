@@ -117,6 +117,8 @@ mod tests {
 
     /// 测试/参数解析
     mod arg_parse {
+        use crate::vm_config::tests::test_config_paths::TEST_OPENNARS;
+
         use super::*;
 
         fn _test_arg_parse(args: &[&str], expected: &CliArgs) {
@@ -158,9 +160,9 @@ mod tests {
         #[test]
         fn test_arg_parse() {
             test_arg_parse! {
-                ["-c", "./src/tests/cli/config/opennars"]
+                ["-c", TEST_OPENNARS]
                 => CliArgs {
-                    config: vec!["./src/tests/cli/config/opennars".into()],
+                    config: vec![TEST_OPENNARS.into()],
                     ..Default::default()
                 };
                 // 多个配置：重复使用`-c`/`--config`，按使用顺序填充
@@ -190,6 +192,9 @@ mod tests {
     /// 测试/加载配置
     mod read_config {
         use super::*;
+        use crate::vm_config::tests::test_config_paths::TEST_OPENNARS;
+        use crate::vm_config::tests::test_config_paths::TEST_PRELUDE_SIMPLE_DEDUCTION;
+        use crate::vm_config::tests::test_config_paths::TEST_WEBSOCKET;
         use crate::vm_config::*;
         use crate::LaunchConfigWebsocket;
 
@@ -219,7 +224,7 @@ mod tests {
             // 成功测试
             test! {
                     // 单个配置文件
-                    ["-c" "src/tests/cli/config/opennars" "-d"] => LaunchConfig {
+                    ["-c" TEST_OPENNARS "-d"] => LaunchConfig {
                         translators: Some(
                             LaunchConfigTranslators::Same(
                                 "opennars".into(),
@@ -236,7 +241,7 @@ mod tests {
                         }),
                         ..Default::default()
                     };
-                    ["-c" "src/tests/cli/config/websocket" "-d"] => LaunchConfig {
+                    ["-c" TEST_WEBSOCKET "-d"] => LaunchConfig {
                         websocket: Some(LaunchConfigWebsocket {
                             host: "localhost".into(),
                             port: 8080,
@@ -246,8 +251,8 @@ mod tests {
                     // 两个配置文件合并
                     [
                         "-d"
-                        "-c" "src/tests/cli/config/opennars"
-                        "-c" "src/tests/cli/config/websocket"
+                        "-c" TEST_OPENNARS
+                        "-c" TEST_WEBSOCKET
                     ] => LaunchConfig {
                         translators: Some(
                             LaunchConfigTranslators::Same(
@@ -272,9 +277,9 @@ mod tests {
                     // 三个配置文件合并
                     [
                         "-d"
-                        "-c" "src/tests/cli/config/opennars"
-                        "-c" "src/tests/cli/config/websocket"
-                        "-c" "src/tests/cli/config/test_prelude_simple_deduction"
+                        "-c" TEST_OPENNARS
+                        "-c" TEST_WEBSOCKET
+                        "-c" TEST_PRELUDE_SIMPLE_DEDUCTION
                     ] => LaunchConfig {
                         translators: Some(
                             LaunchConfigTranslators::Same(

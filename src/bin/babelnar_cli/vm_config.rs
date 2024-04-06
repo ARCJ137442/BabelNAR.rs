@@ -63,7 +63,7 @@
 
 use anyhow::{anyhow, Result};
 use babel_nar::println_cli;
-use nar_dev_utils::{if_return, pipe, OptionBoost, ResultBoost};
+use nar_dev_utils::{if_return, manipulate, pipe, OptionBoost, ResultBoost};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::read_to_string,
@@ -91,6 +91,8 @@ macro_rules! coalesce_clones {
 ///     * 📄`true`可以在识别到`null`时替换`null`，而无需管其是否为默认值
 ///   * 🚩在启动时会转换为「运行时配置」，并在此时检查完整性
 ///   * 📌这意味着其总是能派生[`Default`]
+/// * ⚠️其中的所有**相对路径**，在[`read_config_extern`]中都基于**配置文件自身**
+///   * 🎯不论CLI自身所处何处，均保证配置读取稳定
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -305,7 +307,7 @@ pub struct LaunchConfigCommand {
 
     /// 工作目录（可选）
     /// * 🎯可用于Python模块
-    pub current_dir: Option<String>,
+    pub current_dir: Option<PathBuf>,
 }
 
 /// Websocket参数
@@ -370,6 +372,7 @@ impl LaunchConfig {
 
     /// 判断其自身是否需要用户填充
     /// * 🎯用于在「启动NAVM运行时」时避免「参数无效」情况
+    /// * 📌原则：必填参数不能为空
     /// * 🚩判断「启动时必要项」是否为空
     pub fn need_polyfill(&self) -> bool {
         // 启动命令非空
@@ -378,6 +381,38 @@ impl LaunchConfig {
         self.translators.is_none()
         // ! Websocket为空⇒不启动Websocket服务器
         // ! 预加载NAL为空⇒不预加载NAL
+    }
+
+    /// 变基配置中所含的路径，从其它地方变为
+    /// * 🎯解决「配置中的**相对路径**仅相对于exe而非配置文件本身」的问题
+    /// * 🎯将配置中相对路径的**根目录**从「exe」变更到配置文件本身
+    /// * 🚩将`config_path`的路径追加到自身[`Path::is_relative`]的路径中，使之以`config_path`为根路径
+    pub fn rebase_path_from(&mut self, config_path: &Path) {
+        /// 变基一个相对路径
+        /// * 🚩是相对路径⇒尝试变基
+        #[inline(always)]
+        fn rebase_one(config_path: &Path, relative_path: &mut PathBuf) {
+            if relative_path.is_relative() {
+                *relative_path = config_path.join(&relative_path);
+            }
+        }
+        // 预加载NAL
+        if let Some(LaunchConfigPreludeNAL::File(ref mut path)) = &mut self.prelude_nal {
+            rebase_one(config_path, path);
+        }
+        // 启动命令
+        if let Some(LaunchConfigCommand {
+            current_dir: Some(ref mut path),
+            ..
+        }) = &mut self.command
+        {
+            rebase_one(config_path, path);
+        }
+    }
+
+    /// 变基路径，但基于所有权[`Self`]→[`Self`]
+    pub fn rebase_path_from_owned(self, config_path: &Path) -> Self {
+        manipulate!( self => .rebase_path_from(config_path) )
     }
 
     /// 从另一个配置中并入配置
@@ -430,7 +465,9 @@ impl LaunchConfigCommand {
 /// 从外部JSON文件中加载启动配置
 /// * 🎯错误处理 & 错误⇒空置
 /// * 🚩在遇到错误时会发出警告
-/// * ⚠️若无需打印警告，请使用[`read_config_extern`]
+/// * ⚠️若无需打印警告（并手动处理错误），请使用[`read_config_extern`]
+/// * ⚠️其中的所有**相对路径**，在[`read_config_extern`]中都基于**配置文件自身**
+///   * 🎯不论CLI自身所处何处，均保证配置读取稳定
 pub fn load_config_extern(path: &Path) -> Option<LaunchConfig> {
     // Ok⇒Some，Err⇒警告+None
     read_config_extern(path).ok_or_run(|e| {
@@ -439,7 +476,7 @@ pub fn load_config_extern(path: &Path) -> Option<LaunchConfig> {
         if let Some(e) = e.downcast_ref::<std::io::Error>() {
             match e.kind() {
                 std::io::ErrorKind::NotFound => {
-                    println_cli!([Warn] "未找到外部配置，使用空配置……");
+                    println_cli!([Warn] "未在路径 {path:?} 找到外部配置，返回空配置……");
                 }
                 _ => println_cli!([Warn] "读取外部配置时出现预期之外的错误: {}", e),
             }
@@ -448,7 +485,7 @@ pub fn load_config_extern(path: &Path) -> Option<LaunchConfig> {
         else if let Some(e) = e.downcast_ref::<serde_json::Error>() {
             match e.classify() {
                 serde_json::error::Category::Syntax => {
-                    println_cli!([Warn] "外部配置文件格式错误，使用空配置……");
+                    println_cli!([Warn] "外部配置文件格式错误，返回空配置……");
                 }
                 _ => println_cli!([Warn] "解析外部配置时出现预期之外的错误: {}", e),
             }
@@ -475,6 +512,8 @@ pub fn load_config_extern(path: &Path) -> Option<LaunchConfig> {
 
 /// 从外部JSON文件中读取启动配置
 /// * 🎯仅涉及具体读取逻辑，不涉及错误处理
+/// * ⚠️其中的所有**相对路径**，在[`read_config_extern`]中都基于**配置文件自身**
+///   * 🎯不论CLI自身所处何处，均保证配置读取稳定
 pub fn read_config_extern(path: &Path) -> Result<LaunchConfig> {
     // 尝试读取外部启动配置，并尝试解析
     pipe! {
@@ -488,6 +527,8 @@ pub fn read_config_extern(path: &Path) -> Result<LaunchConfig> {
         => #{&}
         => LaunchConfig::from_json_str
         => {?}#
+        // 变基相对路径，从「基于CLI自身」到「基于配置文件自身」
+        => .rebase_path_from_owned(path.parent().ok_or(anyhow!("无效的根路径！"))?)
         // 返回Ok（转换为`anyhow::Result`）
         => Ok
     }
@@ -517,12 +558,39 @@ pub fn try_complete_path(path: &Path) -> PathBuf {
 
 /// 单元测试
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use anyhow::Result;
 
+    /// 测试用文件路径
+    /// * 🎯后续其它地方统一使用该处路径
+    /// * 📌相对路径の根目录：项目根目录（`Cargo.toml`所在目录）
+    /// * ⚠️只与配置文件路径有关，不与CIN位置有关
+    ///   * 💭后续若在不同工作环境中，需要调整配置文件中有关「CIN位置」的信息
+    pub mod test_config_paths {
+        #![allow(unused)]
+        /// 测试OpenNARS
+        pub const TEST_OPENNARS: &str = "./src/tests/cli/config/opennars.hjson";
+        /// 测试ONA
+        pub const TEST_ONA: &str = "./src/tests/cli/config/test_ona.hjson";
+        /// PyNARS
+        pub const PYNARS: &str = "./src/tests/cli/config/pynars.hjson";
+        /// 预引入/简单演绎推理
+        pub const TEST_PRELUDE_SIMPLE_DEDUCTION: &str =
+            "./src/tests/cli/config/test_prelude_simple_deduction.hjson";
+        /// 预引入/操作
+        pub const TEST_PRELUDE_OPERATION: &str =
+            "./src/tests/cli/config/test_prelude_operation.hjson";
+        /// 预引入/Websocket
+        pub const TEST_WEBSOCKET: &str = "./src/tests/cli/config/websocket.hjson";
+        /// 预引入/Matriangle服务器
+        pub const TEST_MATRIANGLE_SERVER: &str = "./src/tests/cli/config/matriangle_server.hjson";
+    }
+    use nar_dev_utils::asserts;
+    use test_config_paths::*;
+
     /// 实用测试宏
-    macro_rules! test {
+    macro_rules! test_parse {
         { $( $data:expr => $expected:expr )* } => {
             $(
                 _test(&$data, &$expected).expect("测试失败");
@@ -540,13 +608,15 @@ mod tests {
         Ok(())
     }
 
-    /// 主测试
+    /// 测试/解析
+    /// * 🎯JSON/HJSON的解析逻辑
     #[test]
-    fn main() {
-        test! {
+    fn test_parse() {
+        test_parse! {
             // 平凡情况/空
             "{}" => LaunchConfig::new()
             "{}" => LaunchConfig::default()
+            "{}" => EMPTY_LAUNCH_CONFIG
             // 完整情况
             r#"
             {
@@ -621,5 +691,20 @@ mod tests {
         /*
         "file": "root/path/to/file"
         */
+    }
+
+    /// 测试/读取
+    /// * 🎯相对**配置文件**的路径表示
+    #[test]
+    fn test_read() {
+        // 使用OpenNARS配置文件的路径作测试
+        let path: PathBuf = TEST_OPENNARS.into();
+        let launch_config = read_config_extern(&path).expect("路径读取失败");
+        let expected_path = "./src/tests/cli/config/root/nars/test".into();
+        asserts! {
+            // * 🎯启动命令中的「当前目录」应该被追加到配置自身的路径上
+            // * ✅即便拼接后路径是`"./src/tests/cli/config\\root/nars/test"`，也和上边的路径相等
+            launch_config.command.unwrap().current_dir => Some(expected_path)
+        }
     }
 }

@@ -164,6 +164,7 @@ where
                 &mut *try_break!(OutputCache::unlock_arc_mutex(&mut self.output_cache));
 
             // 读取内容
+            // TODO: 从「配置文件所在路径」开始
             let nal = match prelude_nal {
                 // 文件⇒尝试读取文件内容 | ⚠️此处创建了一个新值，所以要统一成`String`
                 LaunchConfigPreludeNAL::File(path) => try_break!(std::fs::read_to_string(path)),

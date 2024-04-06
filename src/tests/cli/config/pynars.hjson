@@ -1,11 +1,16 @@
-// TODO: 待完成
+// PyNARS的启动配置
+// * ⚠️【2024-04-06 16:47:55】目前仍然使用了相对路径
 {
     translators: pynars
     command: {
-        cmd: ../../NARS-executables/NAR.exe
+        cmd: python
         cmdArgs: [
-            shell
+            -m
+            pynars.Console
         ]
+        // ! ⚠️此处为本机路径，在其它系统测试时需要修改到正确的PyNARS目录内
+        // * 文件结构：参考GitHub https://github.com/bowen-xu/PyNARS
+        currentDir: ../../PyNARS-dev
     }
     autoRestart: true
 }
