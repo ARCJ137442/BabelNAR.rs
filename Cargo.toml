@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.17.1"
+version = "0.18.0"
 edition = "2021"
 description = """
 Implementation and application supports of the NAVM model
@@ -25,6 +25,7 @@ repository = "https://github.com/ARCJ137442/BabelNAR.rs"
 # 用于错误处理
 thiserror = "1.0.58"
 anyhow = "1.0.81"
+clearscreen = "2.0.1"
 
 [dependencies.nar_dev_utils]
 # 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`

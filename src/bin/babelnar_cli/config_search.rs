@@ -6,6 +6,7 @@ use babel_nar::{
     cli_support::cin_search::{name_match::is_name_match, path_walker::PathWalkerV1},
     println_cli,
 };
+use nar_dev_utils::ToDebug;
 use std::path::{Path, PathBuf};
 
 pub fn search_configs<S: AsRef<str>>(
@@ -66,7 +67,8 @@ pub fn search_configs<S: AsRef<str>>(
             println_cli!([Info] "已搜索到以下有效配置：");
             for (i, config) in valid_non_empty_configs.iter().enumerate() {
                 // TODO: 后续或许在其中添加描述信息？
-                println_cli!([Info] "【{i}】 {config:?}");
+                let information = config.description.clone().unwrap_or(config.to_debug());
+                println_cli!([Info] "【{i}】 {information}");
             }
         }
     }

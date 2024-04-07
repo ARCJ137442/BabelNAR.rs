@@ -1,6 +1,7 @@
 #hjson
 // * 🎯用于测试ONA
-//  * 📝ONA依赖cygwin，故即便内置也容易出错
+// * ⚠️启动需要cygwin
+//   * 🔗中文官网: http://www.cygwin.cn/
 {
     // 转译器支持单独指定「输入转译器」和「输出转译器」
     translators: {

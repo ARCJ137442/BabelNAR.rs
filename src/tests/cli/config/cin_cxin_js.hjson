@@ -1,7 +1,6 @@
 #hjson
-// * 🎯用于测试ONA
-// ! ⚠️使用了与项目无关的本地路径
-//  * 📝ONA依赖cygwin，故即便内置也容易出错
+// * 🎯用于测试CXinNARS（JS版本）
+//  * 📌使用Node.js启动
 {
     // 转译器支持单独指定「输入转译器」和「输出转译器」
     translators: cxin_js

@@ -103,6 +103,13 @@ macro_rules! coalesce_clones {
 #[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LaunchConfig {
+    /// 启动配置的文本描述
+    /// * 🎯在自动搜索时呈现给用户
+    /// * 📌一般是单行文本
+    ///
+    /// * ❓I18n 国际化
+    pub description: Option<String>,
+
     /// 转译器组合
     /// * 🚩使用字符串模糊匹配
     pub translators: Option<LaunchConfigTranslators>,
@@ -153,6 +160,7 @@ pub struct LaunchConfig {
 /// * ✅与此同时，实现了「有提醒的后期维护」
 ///   * 📌后续若新增字段，此处会因「缺字段」立即报错
 const EMPTY_LAUNCH_CONFIG: LaunchConfig = LaunchConfig {
+    description: None,
     translators: None,
     command: None,
     websocket: None,
