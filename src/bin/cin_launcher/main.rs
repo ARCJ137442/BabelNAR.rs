@@ -15,6 +15,7 @@ use babel_nar::{
     cin_implements::{ona::ONA, opennars::OpenNARS, pynars::PyNARS},
     eprintln_cli, println_cli,
     runtimes::CommandVmRuntime,
+    tests::cin_paths::{ONA, OPENNARS, PYNARS_ROOT},
 };
 use nar_dev_utils::*;
 use navm::{
@@ -24,9 +25,9 @@ use navm::{
 };
 use std::{fmt::Debug, io::stdin};
 
-const TEST_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
-const TEST_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
-const TEST_PATH_PYNARS: (&str, &str) = ("..\\..\\PyNARS-dev", "pynars.ConsolePlus");
+const TEST_PATH_OPENNARS: &str = OPENNARS;
+const TEST_PATH_ONA: &str = ONA;
+const TEST_PATH_PYNARS: (&str, &str) = (PYNARS_ROOT, "pynars.ConsolePlus");
 
 /// 启动并获取NARS
 /// * 🚩【2024-03-27 18:55:07】目前就返回一个测试用的运行时
@@ -108,17 +109,6 @@ mod tests {
     use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
     use navm::cmd::Cmd;
     use navm::vm::VmLauncher;
-
-    #[test]
-    fn test_20240328() {
-        // let (test1, test2) = generate_test_cmds();
-        // // let nars = CXinJS::new(r"..\cxin-nars-py-to-ts\src\cxin-nars-shell.js");
-        // // let nars = OpenNARS::new(r"..\..\NARS-executables\opennars-304-T-modified.jar");
-        // let nars = ONA::new("..\\..\\NARS-executables\\NAR.exe");
-        // // let nars = PyNARS::new("..\\..\\PyNARS-dev", "pynars.ConsolePlus");
-        // std::thread::sleep(std::time::Duration::from_secs(1));
-        // test_set(nars.launch(), test1);
-    }
 
     fn test_set(mut nars: impl VmRuntime, test_set: Vec<Cmd>) {
         for cmd in test_set {

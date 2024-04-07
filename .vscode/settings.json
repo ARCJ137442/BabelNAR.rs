@@ -3,6 +3,7 @@
     "editor.formatOnSave": true,
     "cSpell.words": [
         "Addrs",
+        "canonicalize",
         "confy",
         "cxin",
         "deser",

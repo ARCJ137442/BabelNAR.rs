@@ -495,15 +495,12 @@ impl IoProcessManager {
 /// 单元测试
 #[cfg(test)]
 pub(crate) mod tests {
-
     use super::*;
+    use crate::tests::cin_paths::ONA as PATH_ONA;
     use std::{
         process::exit,
         sync::{Arc, Mutex},
     };
-
-    // 定义一系列路径
-    const EXE_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
 
     /// 测试工具/等待子进程输出，直到输出满足条件
     pub fn await_fetch_until(process: &mut IoProcessManager, criterion: impl Fn(String) -> bool) {
@@ -522,7 +519,7 @@ pub(crate) mod tests {
         let outputs = Arc::new(Mutex::new(vec![]));
         let outputs_inner = outputs.clone();
         // 从一个系统指令开始构建子进程
-        let process = IoProcess::new(EXE_PATH_ONA)
+        let process = IoProcess::new(PATH_ONA)
             // 添加命令参数
             .arg("shell")
             // 添加输出监听器 | 简单回显

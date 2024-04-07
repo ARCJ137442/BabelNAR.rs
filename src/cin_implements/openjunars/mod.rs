@@ -16,7 +16,7 @@ mod tests {
     #![allow(unused)]
 
     use super::*;
-    use crate::runtimes::{tests::JL_PATH_OPEN_JUNARS, CommandVmRuntime};
+    use crate::{runtimes::CommandVmRuntime, tests::cin_paths::OPENJUNARS};
     use narsese::conversion::string::impl_lexical::shortcuts::*;
     use navm::{
         cmd::Cmd,
@@ -26,12 +26,11 @@ mod tests {
     #[test]
     fn test() {
         // 从别的地方获取jl路径
-        let jl_path = JL_PATH_OPEN_JUNARS;
+        let jl_path = OPENJUNARS;
         // 一行代码启动OpenJunars
         let vm = OpenJunars::new(jl_path).launch().expect("无法启动虚拟机");
         // 运行专有测试
         // ! ❌【2024-03-25 13:56:21】目前无法截取到Julia运行时输出，弃用
-        // _test_opennars(vm)
         _test_open_junars(vm)
     }
 
@@ -39,15 +38,15 @@ mod tests {
     pub(crate) fn _test_open_junars(mut vm: CommandVmRuntime) {
         // ! ❌【2024-03-25 13:55:57】无效：似乎无法截取到Julia运行时输出
 
-        // vm.input_cmd(Cmd::NSE(nse_task!(<A --> B>.)))
-        //     .expect("无法输入指令");
+        vm.input_cmd(Cmd::NSE(nse_task!(<A --> B>.)))
+            .expect("无法输入指令");
 
-        // // 等待四秒钟，让Junars启动
-        // std::thread::sleep(std::time::Duration::from_secs(1));
+        // 等待四秒钟，让Junars启动
+        std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // vm.input_cmd(Cmd::NSE(nse_task!(<A --> B>.)))
-        //     .expect("无法输入指令");
-        // std::thread::sleep(std::time::Duration::from_secs(6));
+        vm.input_cmd(Cmd::NSE(nse_task!(<A --> B>.)))
+            .expect("无法输入指令");
+        std::thread::sleep(std::time::Duration::from_secs(6));
 
         // 终止虚拟机运行时
         vm.terminate().expect("无法终止虚拟机");

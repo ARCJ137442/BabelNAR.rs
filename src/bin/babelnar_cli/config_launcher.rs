@@ -68,6 +68,11 @@ pub fn launch_by_config(
     // 转换启动配置
     let config: RuntimeConfig = config.try_into()?;
 
+    // * 🚩【2024-04-07 10:13:51】目前通过「设置exe工作路径」切换到启动环境中
+    if let Some(path) = &config.command.current_dir {
+        std::env::set_current_dir(path)?;
+    }
+
     // 生成虚拟机
     let runtime = launch_by_runtime_config(&config)?;
 
@@ -95,7 +100,10 @@ pub fn load_command_vm(config: &LaunchConfigCommand) -> Result<CommandVm> {
     // 构造指令
     let command = generate_command(
         &config.cmd,
-        config.current_dir.as_ref(),
+        // ! 🚩【2024-04-07 12:35:41】不能再设置工作目录：已在[`launch_by_config`]处设置
+        // * 否则会导致「目录名称无效」
+        // config.current_dir.as_ref(),
+        None::<&str>,
         // 🚩获取其内部数组的引用，或使用一个空数组作迭代器（无法简化成[`unwrap_or`]）
         match &config.cmd_args {
             Some(v) => v.iter(),

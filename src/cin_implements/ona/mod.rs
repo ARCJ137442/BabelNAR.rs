@@ -16,9 +16,12 @@ util::mod_and_pub_use! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtimes::{
-        tests::{_test_ona, test_simple_answer, EXE_PATH_ONA},
-        CommandVmRuntime,
+    use crate::{
+        runtimes::{
+            tests::{_test_ona, test_simple_answer},
+            CommandVmRuntime,
+        },
+        tests::cin_paths::ONA as EXE_PATH_ONA,
     };
     use navm::vm::VmLauncher;
 

@@ -1,16 +1,11 @@
-' 用于测试CIN的「简单演绎推理」
-' * 📍所涉及NAL层级：NAL-1
-' * 📝在「文件表示」上利用现有`Narsese`语法
+' 用于测试「自变量消除」
+' * 📍所涉及NAL层级：NAL-6
 '
-' 输出等待 `expect-contains`
-' * 📝统一的NAL等待语法：`''await: 【输入类别】 【其它内容】`
-' * ⚠️可能会阻塞测试，慎用
-' * 🚩以下await已被注释失效，仅作语法演示
-'
-' 输出预期 `expect-contains`
+' 输出预期
 ' * 📝统一的NAL测试语法：`''expect-contains: 【输出类别】 【其它内容】`
 '   * 📄预期「回答」：`''expect-contains: ANSWER 【CommonNarsese】`
 '   * 📄预期「操作」：`''expect-contains: EXE (^【操作名】, 【操作参数（CommonNarsese词项）】)`
+' * 🚩【2024-04-03 02:10:19】有时对操作需要等待足够的时长，才能捕获到输出
 
 ' 🚩降低音量，减少无关输出
 '/VOL 0
@@ -19,17 +14,15 @@
 ''sleep: 0.5s
 
 <A --> B>.
-' // ''await: IN <A --> B>.
-<B --> C>.
-' // ''await: IN <B --> C>.
-<A --> C>?
-5
+<<A --> $1> ==> <$1 --> C>>.
+<B --> C>?
+100
 
 ' 使用睡眠延时，给足输出呈现时间
 ''sleep: 1s
 
 ' 检验输出
-''expect-contains: ANSWER <A --> C>.
+''expect-contains: ANSWER <B --> C>.
 
 ' 用户无法输入时退出（正常退出）
 ''terminate(if-no-user)

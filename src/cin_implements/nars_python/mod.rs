@@ -16,7 +16,7 @@ util::mod_and_pub_use! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtimes::{tests::EXE_PATH_NARS_PYTHON, CommandVmRuntime};
+    use crate::{runtimes::CommandVmRuntime, tests::cin_paths::NARS_PYTHON};
     use narsese::conversion::string::impl_lexical::shortcuts::*;
     use navm::{
         cmd::Cmd,
@@ -26,7 +26,7 @@ mod tests {
     #[test]
     fn test() {
         // 从别的地方获取exe路径
-        let exe_path = EXE_PATH_NARS_PYTHON;
+        let exe_path = NARS_PYTHON;
         // 一行代码启动NARS-Python
         let vm = NARSPython::new(exe_path).launch().expect("无法启动虚拟机");
         // 运行专有测试

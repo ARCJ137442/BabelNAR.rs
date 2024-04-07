@@ -17,7 +17,7 @@ use std::{ffi::OsStr, path::Path, process::Command};
 pub fn generate_command<S>(
     exe_path: impl AsRef<Path>,
     current_dir: Option<impl AsRef<Path>>,
-    args: impl Iterator<Item = S>,
+    args: impl IntoIterator<Item = S>,
 ) -> Command
 where
     S: AsRef<OsStr>,

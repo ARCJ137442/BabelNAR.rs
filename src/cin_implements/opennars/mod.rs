@@ -16,9 +16,12 @@ util::mod_and_pub_use! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtimes::{
-        tests::{_test_opennars, test_simple_answer, JAR_PATH_OPENNARS},
-        CommandVmRuntime,
+    use crate::{
+        runtimes::{
+            tests::{_test_opennars, test_simple_answer},
+            CommandVmRuntime,
+        },
+        tests::cin_paths::OPENNARS as JAR_PATH_OPENNARS,
     };
     use navm::vm::VmLauncher;
 
@@ -30,6 +33,7 @@ mod tests {
         OpenNARS::new(jar_path).launch().expect("无法启动虚拟机")
     }
 
+    /// 测试
     #[test]
     fn test() {
         // 启动OpenNARS虚拟机

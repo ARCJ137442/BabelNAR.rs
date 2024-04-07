@@ -125,7 +125,11 @@ impl VmLauncher<CommandVmRuntime> for CommandVm {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::runtimes::TranslateError;
+    use crate::{
+        cin_implements::common::generate_command,
+        runtimes::TranslateError,
+        tests::cin_paths::{OPENNARS, PYNARS_MODULE, PYNARS_ROOT},
+    };
     use nar_dev_utils::manipulate;
     use narsese::{
         api::{GetBudget, GetPunctuation, GetStamp, GetTerm, GetTruth},
@@ -145,16 +149,7 @@ pub mod tests {
     use std::process::Command;
     use util::first;
 
-    // 定义一系列路径
-    // * 📌【2024-03-25 09:28:36】本地调试：都从根目录`BabelNAR.rs`开始
-    // * 📄退一级到开发目录，再退一级到各NARS下载目录
-    pub const JAR_PATH_OPENNARS: &str = r"..\..\NARS-executables\opennars-304-T-modified.jar";
-    pub const EXE_PATH_ONA: &str = r"..\..\NARS-executables\NAR.exe";
-    pub const EXE_PATH_PYNARS: &str = r"..\..\NARS-executables\launch-pynars-console-plus.cmd";
-    pub const MODULE_ROOT_PYNARS: &str = r"..\..\PyNARS-dev";
-    pub const MODULE_PATH_PYNARS: &str = r"pynars.ConsolePlus";
-    pub const EXE_PATH_NARS_PYTHON: &str = r"..\..\NARS-executables\main.exe";
-    pub const JL_PATH_OPEN_JUNARS: &str = r"..\..\OpenJunars\launch.jl";
+    // ! 🚩【2024-04-07 12:09:44】现在路径统一迁移到`lib.rs`的`tests`模块下
 
     const COMMAND_JAVA: &str = "java";
     const COMMAND_ARGS_JAVA: [&str; 2] = ["-Xmx1024m", "-jar"];
@@ -368,7 +363,7 @@ pub mod tests {
         // * 📝这里的`args`、`arg都返回的可变借用。。
         command_java
             .args(COMMAND_ARGS_JAVA)
-            .arg(JAR_PATH_OPENNARS)
+            .arg(OPENNARS)
             // OpenNARS的默认参数 | ["null", "null", "null", "null"]
             // * 🔗https://github.com/opennars/opennars/blob/master/src/main/java/org/opennars/main/Shell.java
             // * ✅fixed「额外参数」问题：之前「IO进程」的测试代码`.arg("shell")`没删干净
@@ -444,11 +439,11 @@ pub mod tests {
     }
 
     /// 示例测试 | PyNARS
-    /// * 🚩通过预置的批处理文件启动
+    /// * 🚩通过Python命令从**内置文件**启动
     #[test]
     fn test_pynars() {
         let vm = manipulate!(
-            CommandVm::new(EXE_PATH_PYNARS)
+            CommandVm::from(generate_command("python", Some(PYNARS_ROOT), ["-m", PYNARS_MODULE]))
             // 输入转译器：直接取其尾部
             => .input_translator(|cmd| Ok(cmd.tail()))
             // 暂无输出转译器

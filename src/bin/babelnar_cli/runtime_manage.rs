@@ -12,6 +12,7 @@ use babel_nar::{
         },
     },
     eprintln_cli, println_cli,
+    runtimes::TranslateError,
     test_tools::{nal_format::parse, put_nal, VmOutputCache},
 };
 use nar_dev_utils::{if_return, ResultBoost};
@@ -164,10 +165,15 @@ where
                 &mut *try_break!(OutputCache::unlock_arc_mutex(&mut self.output_cache));
 
             // 读取内容
-            // TODO: 从「配置文件所在路径」开始
             let nal = match prelude_nal {
                 // 文件⇒尝试读取文件内容 | ⚠️此处创建了一个新值，所以要统一成`String`
-                LaunchConfigPreludeNAL::File(path) => try_break!(std::fs::read_to_string(path)),
+                LaunchConfigPreludeNAL::File(path) => {
+                    try_break!(std::fs::read_to_string(path) => e {
+                        println_cli!([Error] "读取预置NAL文件 {path:?} 发生错误：{e}");
+                        // 继续（用户输入/Websocket服务端）
+                        e.into()
+                    })
+                }
                 // 纯文本⇒直接引入
                 LaunchConfigPreludeNAL::Text(nal) => nal.to_string(),
             };
@@ -351,8 +357,16 @@ where
                     if let Err(e) = put_result {
                         // 无论是否严格模式，都报告错误
                         eprintln_cli!([Error] "置入NAL输入「{nal:?}」时发生错误：{e}");
-                        // 严格模式下提前返回
-                        if_return! { config.strict_mode => Err(e) }
+                        // 严格模式下考虑上报错误
+                        if config.strict_mode {
+                            match e.downcast_ref::<TranslateError>() {
+                                // * 🚩在「不支持的指令」时仅警告
+                                // * 🎯**兼容尽可能多的CIN版本**
+                                Some(TranslateError::UnsupportedInput(..)) => {}
+                                // * 🚩在「其他错误」时直接返回
+                                _ => return Err(e),
+                            }
+                        }
                     }
                 }
             }

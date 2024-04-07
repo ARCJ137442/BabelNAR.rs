@@ -63,11 +63,11 @@
 
 use anyhow::{anyhow, Result};
 use babel_nar::println_cli;
-use nar_dev_utils::{if_return, manipulate, pipe, OptionBoost, ResultBoost};
+use nar_dev_utils::{if_return, pipe, OptionBoost, ResultBoost};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::read_to_string,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 /// 工具宏/批量拷贝性合并
@@ -307,6 +307,8 @@ pub struct LaunchConfigCommand {
 
     /// 工作目录（可选）
     /// * 🎯可用于Python模块
+    /// * 🚩【2024-04-07 10:13:59】现在用于「基于配置文件的相对路径」
+    ///   * 📌被主程序在启动时用于「设置自身工作目录」
     pub current_dir: Option<PathBuf>,
 }
 
@@ -383,22 +385,73 @@ impl LaunchConfig {
         // ! 预加载NAL为空⇒不预加载NAL
     }
 
+    /// 变基一个相对路径
+    /// * 🚩将`config_path`的路径作为自身[`Path::is_relative`]的根路径
+    ///   * 📌引入[`Path::canonicalize`]解决「`path/test/../a` => `path/a`」的问题
+    /// * 📌总是将相对路径（按照以`config_path`为根路径）展开成绝对路径
+    #[inline(always)]
+    pub fn rebase_relative_path(config_path: &Path, relative_path: &mut PathBuf) -> Result<()> {
+        // 若`relative_path`非相对路径，直接返回
+        if_return! { relative_path.is_absolute() => Ok(()) }
+        // 先绝对化「配置根路径」
+        let mut new_path = config_path.canonicalize()?;
+        // 遍历「相对路径」的组分，追加/上溯路径
+        for component in relative_path.components() {
+            match component {
+                // 当前文件夹⇒跳过
+                Component::CurDir => continue,
+                // 上一级文件夹⇒上溯
+                Component::ParentDir => {
+                    new_path.pop();
+                }
+                // 其它⇒增加组分
+                _ => new_path.push(component),
+            }
+        }
+
+        // * ❌无法通过真正治本的「前缀替换」行事：[`PrefixComponent`]全为私有字段，无法构建⇒无法构建`Component`
+        // let new_path = new_path
+        //     .components()
+        //     .map(|com| match com {
+        //         Component::Prefix(prefix) => {
+        //             let prefix = match prefix.kind() {
+        //                 Prefix::VerbatimUNC(a, b) => Prefix::UNC(a, b),
+        //                 Prefix::VerbatimDisk(name) => Prefix::Disk(name),
+        //                 kind => kind,
+        //             };
+        //             Component::from(prefix)
+        //         }
+        //         _ => com,
+        //     })
+        //     .collect::<PathBuf>();
+
+        // 转换回字符串，然后删除`canonicalize`产生的多余前缀
+        // * ⚠️【2024-04-07 13:51:16】删除原因：JVM、Python等启动命令不能处理带`\\?\【盘符】:`、`\\.\【盘符】:`前缀的路径
+        //   * 📌即便其实际上为「Verbatim UNC prefixes」
+        // * 🔗参考：<https://rust.ffactory.org/std/path/enum.Prefix.html>
+        // * 🔗参考：<https://users.rust-lang.org/t/understanding-windows-paths/58583>
+        // 先转换为字符串
+        if let Some(path) = new_path.to_str() {
+            new_path = path
+                // 删去无用前缀
+                .trim_start_matches(r"\\?\")
+                .trim_start_matches(r"\\.\")
+                // 转换回路径
+                .into();
+        }
+        // 赋值
+        *relative_path = new_path;
+        Ok(())
+    }
+
     /// 变基配置中所含的路径，从其它地方变为
     /// * 🎯解决「配置中的**相对路径**仅相对于exe而非配置文件本身」的问题
     /// * 🎯将配置中相对路径的**根目录**从「exe」变更到配置文件本身
-    /// * 🚩将`config_path`的路径追加到自身[`Path::is_relative`]的路径中，使之以`config_path`为根路径
-    pub fn rebase_path_from(&mut self, config_path: &Path) {
-        /// 变基一个相对路径
-        /// * 🚩是相对路径⇒尝试变基
-        #[inline(always)]
-        fn rebase_one(config_path: &Path, relative_path: &mut PathBuf) {
-            if relative_path.is_relative() {
-                *relative_path = config_path.join(&relative_path);
-            }
-        }
+    /// * 📌原则：由此消灭所有相对路径，均以「配置文件自身路径」为根，转换为绝对路径
+    pub fn rebase_relative_path_from(&mut self, config_path: &Path) -> Result<()> {
         // 预加载NAL
         if let Some(LaunchConfigPreludeNAL::File(ref mut path)) = &mut self.prelude_nal {
-            rebase_one(config_path, path);
+            Self::rebase_relative_path(config_path, path)?;
         }
         // 启动命令
         if let Some(LaunchConfigCommand {
@@ -406,13 +459,18 @@ impl LaunchConfig {
             ..
         }) = &mut self.command
         {
-            rebase_one(config_path, path);
+            Self::rebase_relative_path(config_path, path)?;
         }
+        // 返回成功
+        Ok(())
     }
 
-    /// 变基路径，但基于所有权[`Self`]→[`Self`]
-    pub fn rebase_path_from_owned(self, config_path: &Path) -> Self {
-        manipulate!( self => .rebase_path_from(config_path) )
+    /// 变基路径，但基于所有权
+    /// * 📌总体逻辑：[`Self`]→[`Self`]
+    /// * ⚠️有可能会出错（引入[`Path::canonicalize`]）
+    pub fn rebase_path_from_owned(mut self, config_path: &Path) -> Result<Self> {
+        self.rebase_relative_path_from(config_path)?;
+        Ok(self)
     }
 
     /// 从另一个配置中并入配置
@@ -529,6 +587,7 @@ pub fn read_config_extern(path: &Path) -> Result<LaunchConfig> {
         => {?}#
         // 变基相对路径，从「基于CLI自身」到「基于配置文件自身」
         => .rebase_path_from_owned(path.parent().ok_or(anyhow!("无效的根路径！"))?)
+        => {?}#
         // 返回Ok（转换为`anyhow::Result`）
         => Ok
     }
@@ -561,33 +620,8 @@ pub fn try_complete_path(path: &Path) -> PathBuf {
 pub mod tests {
     use super::*;
     use anyhow::Result;
-
-    /// 测试用文件路径
-    /// * 🎯后续其它地方统一使用该处路径
-    /// * 📌相对路径の根目录：项目根目录（`Cargo.toml`所在目录）
-    /// * ⚠️只与配置文件路径有关，不与CIN位置有关
-    ///   * 💭后续若在不同工作环境中，需要调整配置文件中有关「CIN位置」的信息
-    pub mod test_config_paths {
-        #![allow(unused)]
-        /// 测试OpenNARS
-        pub const TEST_OPENNARS: &str = "./src/tests/cli/config/opennars.hjson";
-        /// 测试ONA
-        pub const TEST_ONA: &str = "./src/tests/cli/config/test_ona.hjson";
-        /// PyNARS
-        pub const PYNARS: &str = "./src/tests/cli/config/pynars.hjson";
-        /// 预引入/简单演绎推理
-        pub const TEST_PRELUDE_SIMPLE_DEDUCTION: &str =
-            "./src/tests/cli/config/test_prelude_simple_deduction.hjson";
-        /// 预引入/操作
-        pub const TEST_PRELUDE_OPERATION: &str =
-            "./src/tests/cli/config/test_prelude_operation.hjson";
-        /// 预引入/Websocket
-        pub const TEST_WEBSOCKET: &str = "./src/tests/cli/config/websocket.hjson";
-        /// 预引入/Matriangle服务器
-        pub const TEST_MATRIANGLE_SERVER: &str = "./src/tests/cli/config/matriangle_server.hjson";
-    }
+    use babel_nar::tests::*;
     use nar_dev_utils::asserts;
-    use test_config_paths::*;
 
     /// 实用测试宏
     macro_rules! test_parse {
@@ -695,12 +729,13 @@ pub mod tests {
 
     /// 测试/读取
     /// * 🎯相对**配置文件**的路径表示
+    /// * 🎯被重定向到`./executables`，以便启动其下的`.jar`文件
     #[test]
     fn test_read() {
         // 使用OpenNARS配置文件的路径作测试
-        let path: PathBuf = TEST_OPENNARS.into();
+        let path: PathBuf = config_paths::OPENNARS.into();
         let launch_config = read_config_extern(&path).expect("路径读取失败");
-        let expected_path = "./src/tests/cli/config/root/nars/test".into();
+        let expected_path = "./executables".into();
         asserts! {
             // * 🎯启动命令中的「当前目录」应该被追加到配置自身的路径上
             // * ✅即便拼接后路径是`"./src/tests/cli/config\\root/nars/test"`，也和上边的路径相等

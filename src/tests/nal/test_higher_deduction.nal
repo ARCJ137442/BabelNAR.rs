@@ -1,5 +1,5 @@
-' 用于测试CIN的「简单演绎推理」
-' * 📍所涉及NAL层级：NAL-1
+' 用于测试CIN的「高阶演绎推理」
+' * 📍所涉及NAL层级：NAL-5
 ' * 📝在「文件表示」上利用现有`Narsese`语法
 '
 ' 输出等待 `expect-contains`
@@ -18,18 +18,18 @@
 ' 🚩【2024-04-07 14:22:28】兼容PyNARS：给启动留足时间
 ''sleep: 0.5s
 
+<<A --> B> ==> <C --> D>>.
+' // ''await: IN <<A --> B> ==> <C --> D>>.
 <A --> B>.
 ' // ''await: IN <A --> B>.
-<B --> C>.
-' // ''await: IN <B --> C>.
-<A --> C>?
+<C --> D>?
 5
 
 ' 使用睡眠延时，给足输出呈现时间
 ''sleep: 1s
 
 ' 检验输出
-''expect-contains: ANSWER <A --> C>.
+''expect-contains: ANSWER <C --> D>.
 
 ' 用户无法输入时退出（正常退出）
 ''terminate(if-no-user)

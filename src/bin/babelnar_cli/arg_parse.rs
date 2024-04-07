@@ -113,13 +113,13 @@ pub fn load_config(args: &CliArgs) -> LaunchConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use babel_nar::tests::*;
     use nar_dev_utils::fail_tests;
 
     /// 测试/参数解析
     mod arg_parse {
-        use crate::vm_config::tests::test_config_paths::TEST_OPENNARS;
-
         use super::*;
+        use config_paths::*;
 
         fn _test_arg_parse(args: &[&str], expected: &CliArgs) {
             // ! 📝此处必须前缀一个「自身程序名」
@@ -160,9 +160,9 @@ mod tests {
         #[test]
         fn test_arg_parse() {
             test_arg_parse! {
-                ["-c", TEST_OPENNARS]
+                ["-c", ARG_PARSE_TEST]
                 => CliArgs {
-                    config: vec![TEST_OPENNARS.into()],
+                    config: vec![ARG_PARSE_TEST.into()],
                     ..Default::default()
                 };
                 // 多个配置：重复使用`-c`/`--config`，按使用顺序填充
@@ -192,11 +192,10 @@ mod tests {
     /// 测试/加载配置
     mod read_config {
         use super::*;
-        use crate::vm_config::tests::test_config_paths::TEST_OPENNARS;
-        use crate::vm_config::tests::test_config_paths::TEST_PRELUDE_SIMPLE_DEDUCTION;
-        use crate::vm_config::tests::test_config_paths::TEST_WEBSOCKET;
         use crate::vm_config::*;
         use crate::LaunchConfigWebsocket;
+        use config_paths::*;
+        use nar_dev_utils::manipulate;
 
         /// 测试/加载配置
         fn load(args: &[&str]) -> LaunchConfig {
@@ -221,10 +220,17 @@ mod tests {
         /// 测试
         #[test]
         fn test() {
+            let expected_current_dir = manipulate!(
+                current_dir().unwrap()
+                => .push("src")
+                => .push("tests")
+                => .push("cli")
+                => .push("executables")
+            );
             // 成功测试
             test! {
                     // 单个配置文件
-                    ["-c" TEST_OPENNARS "-d"] => LaunchConfig {
+                    ["-c" ARG_PARSE_TEST "-d"] => LaunchConfig {
                         translators: Some(
                             LaunchConfigTranslators::Same(
                                 "opennars".into(),
@@ -237,11 +243,11 @@ mod tests {
                                 "-jar".into(),
                                 "nars.jar".into()
                             ]),
-                            current_dir: Some("root/nars/test".into()),
+                            current_dir: Some(expected_current_dir.clone()),
                         }),
                         ..Default::default()
                     };
-                    ["-c" TEST_WEBSOCKET "-d"] => LaunchConfig {
+                    ["-c" WEBSOCKET "-d"] => LaunchConfig {
                         websocket: Some(LaunchConfigWebsocket {
                             host: "localhost".into(),
                             port: 8080,
@@ -251,8 +257,8 @@ mod tests {
                     // 两个配置文件合并
                     [
                         "-d"
-                        "-c" TEST_OPENNARS
-                        "-c" TEST_WEBSOCKET
+                        "-c" ARG_PARSE_TEST
+                        "-c" WEBSOCKET
                     ] => LaunchConfig {
                         translators: Some(
                             LaunchConfigTranslators::Same(
@@ -266,7 +272,7 @@ mod tests {
                                 "-jar".into(),
                                 "nars.jar".into()
                             ]),
-                            current_dir: Some("root/nars/test".into()),
+                            current_dir: Some(expected_current_dir.clone()),
                         }),
                         websocket: Some(LaunchConfigWebsocket {
                             host: "localhost".into(),
@@ -277,9 +283,9 @@ mod tests {
                     // 三个配置文件合并
                     [
                         "-d"
-                        "-c" TEST_OPENNARS
-                        "-c" TEST_WEBSOCKET
-                        "-c" TEST_PRELUDE_SIMPLE_DEDUCTION
+                        "-c" ARG_PARSE_TEST
+                        "-c" WEBSOCKET
+                        "-c" PRELUDE_TEST
                     ] => LaunchConfig {
                         translators: Some(
                             LaunchConfigTranslators::Same(
@@ -293,13 +299,12 @@ mod tests {
                                 "-jar".into(),
                                 "nars.jar".into()
                             ]),
-                            current_dir: Some("root/nars/test".into()),
+                            current_dir: Some(expected_current_dir.clone()),
                         }),
                         websocket: Some(LaunchConfigWebsocket {
                             host: "localhost".into(),
                             port: 8080,
                         }),
-                        prelude_nal: Some(LaunchConfigPreludeNAL::File("./src/tests/nal/test_simple_deduction.nal".into())),
                         user_input: Some(false),
                         auto_restart: Some(false),
                         strict_mode: Some(true),
