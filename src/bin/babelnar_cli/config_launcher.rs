@@ -1,7 +1,8 @@
 //! 用于从「启动参数」启动NAVM运行时
 
 use crate::{
-    read_config_extern, LaunchConfig, LaunchConfigCommand, LaunchConfigTranslators, RuntimeConfig,
+    read_config_extern, search_configs, LaunchConfig, LaunchConfigCommand, LaunchConfigTranslators,
+    RuntimeConfig, SUPPORTED_CONFIG_EXTENSIONS,
 };
 use anyhow::{anyhow, Result};
 use babel_nar::{
@@ -9,7 +10,7 @@ use babel_nar::{
         common::generate_command, cxin_js, nars_python, ona, openjunars, opennars, pynars,
     },
     cli_support::{cin_search::name_match::name_match, io::readline_iter::ReadlineIter},
-    eprintln_cli,
+    eprintln_cli, println_cli,
     runtimes::{
         api::{InputTranslator, IoTranslators},
         CommandVm, OutputTranslator,
@@ -21,21 +22,56 @@ use navm::{
     output::Output,
     vm::{VmLauncher, VmRuntime},
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// （若缺省）要求用户手动填充配置项
-pub fn polyfill_config_from_user(config: &mut LaunchConfig) {
+pub fn polyfill_config_from_user(config: &mut LaunchConfig, cwd: Option<impl AsRef<Path>>) {
     if config.need_polyfill() {
-        // * 🚩【2024-04-03 19:33:20】目前是要求输入配置文件路径
-        for line in ReadlineIter::new("请输入配置文件路径（如`BabelNAR.launch.json`）: ")
-        {
+        // * 先搜索已有的文件 | 不开启
+        let search = |verbose| {
+            // 执行搜索
+            let searched_configs = cwd
+                .as_ref()
+                .map(|p| search_configs(p.as_ref(), SUPPORTED_CONFIG_EXTENSIONS, verbose));
+            // 转换为数组并返回
+            match searched_configs {
+                Some(Ok(v)) => v.into_iter().collect(),
+                _ => vec![],
+            }
+        };
+        // 第一次搜索
+        let mut searched_configs = search(false);
+        // * 🚩【2024-04-03 19:33:20】目前是要求输入配置文件位置
+        const HINT: &str = "现在需要输入配置文件位置。\n    示例：「BabelNAR.launch.json」\n    若搜索到已有配置文件，可输入其在方括号内的索引，如「0」\n    可直接按下回车，以查看详细搜索过程";
+        const PROMPT: &str = "配置文件位置: ";
+        // 提示（不会频繁打印）
+        println_cli!([Info] "{}", HINT);
+        for line in ReadlineIter::new(PROMPT) {
             // 检验输入
-            if let Err(e) = line {
-                eprintln_cli!([Error] "输入无效：{e}");
+            let line = match line {
+                Err(e) => {
+                    eprintln_cli!([Error] "输入无效：{e}");
+                    continue;
+                }
+                Ok(l) => l,
+            }; // ! 不能直接加`.trim()`，临时变量会被抛掉
+            let line = line.trim();
+            if let Ok(i) = line.parse::<usize>() {
+                if i < searched_configs.len() {
+                    println_cli!([Info] "已选择搜索到的第「{i}」个配置：{:?}", searched_configs[i])
+                }
+                // 返回结果
+                *config = searched_configs[i].clone();
+                break;
+            }
+            // 输入为空⇒详细搜索配置⇒重新回到循环
+            if line.is_empty() {
+                searched_configs = search(true);
+                println_cli!([Info] "{}", HINT);
                 continue;
             }
             // 检验路径
-            let path = PathBuf::from(line.unwrap().trim());
+            let path = PathBuf::from(line);
             if !path.is_file() {
                 eprintln_cli!([Error] "文件「{path:?}」不存在");
                 continue;

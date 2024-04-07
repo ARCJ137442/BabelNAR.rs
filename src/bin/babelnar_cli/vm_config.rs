@@ -70,6 +70,12 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+/// 允许的配置文件扩展名
+/// * 🚩【2024-04-07 18:30:24】目前支持JSON与HJSON
+/// * 📌其顺序决定了在「扩展名优先补充」中的遍历顺序
+///   * 📄当`a.hjson`与`a.json`存在时，`a`优先补全为`a.hjson`
+pub const SUPPORTED_CONFIG_EXTENSIONS: &[&str] = &["hjson", "json"];
+
 /// 工具宏/批量拷贝性合并
 /// * 🎯简化重复的`对象.方法`调用
 /// * 📄参考[`Option::coalesce_clone`]
@@ -605,12 +611,12 @@ pub fn try_complete_path(path: &Path) -> PathBuf {
     let path = path.to_path_buf();
     // 当扩展名为空时补全
     if path.extension().is_none() {
-        // 尝试补全为`.hjson` | 无扩展名⇒追加，有扩展名⇒替换
-        let path_ = path.with_extension("hjson");
-        if_return! { path_.exists() => path_ }
-        // 尝试补全为`.json` | 无扩展名⇒追加，有扩展名⇒替换
-        let path_ = path.with_extension("json");
-        if_return! { path_.exists() => path_ }
+        // 尝试用已有的扩展名填充文件名
+        for extension in SUPPORTED_CONFIG_EXTENSIONS {
+            // 尝试补全为指定扩展名 | 无扩展名⇒追加，有扩展名⇒替换
+            let path_ = path.with_extension(extension);
+            if_return! { path_.exists() => path_ }
+        }
     }
     path
 }

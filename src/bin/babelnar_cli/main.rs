@@ -20,7 +20,9 @@ nar_dev_utils::mods! {
     use vm_config;
     // 命令行解析
     use arg_parse;
-    // 从参数启动
+    // 配置（自动）搜索
+    use config_search;
+    // 从配置启动
     use config_launcher;
     // 运行时交互、管理
     use runtime_manage;
@@ -37,7 +39,11 @@ pub fn main() -> Result<()> {
 /// 以特定参数开始命令行主程序
 /// * 🚩此处只应该有自[`env`]传入的参数
 /// * 🚩【2024-04-01 14:25:38】暂时用不到「当前工作路径」
-pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) -> Result<()> {
+pub fn main_args(cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) -> Result<()> {
+    // 解包当前工作目录
+    let cwd = cwd
+        .inspect_err(|e| println_cli!([Warn] "无法获取当前工作目录：{e}"))
+        .ok();
     // （Windows下）启用终端颜色
     let _ = colored::control::set_virtual_terminal(true)
         .inspect_err(|_| eprintln_cli!([Error] "无法启动终端彩色显示。。"));
@@ -45,8 +51,8 @@ pub fn main_args(_cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) ->
     let args = CliArgs::parse_from(args);
     // 读取配置 | with 默认配置文件
     let mut config = load_config(&args);
-    // 用户填充配置项
-    polyfill_config_from_user(&mut config);
+    // 用户填充配置项 | 需要用户输入、工作路径（🎯自动搜索）
+    polyfill_config_from_user(&mut config, cwd);
     // 从配置项启动 | 复制一个新配置，不会附带任何非基础类型开销
     let (runtime, config) = match launch_by_config(config.clone()) {
         // 启动成功⇒返回
