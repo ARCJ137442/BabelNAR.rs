@@ -224,9 +224,11 @@ mod tests {
             PYNARS;
 
             /// 简单演绎
+            /// * 📝✅【2024-04-07 17:11:22】成功
             nal_de => NAL_SIMPLE_DEDUCTION
 
             /// 高阶演绎
+            /// * 📝✅【2024-04-07 17:11:36】成功
             nal_hi => NAL_HIGHER_DEDUCTION
 
             /// 自变量消除

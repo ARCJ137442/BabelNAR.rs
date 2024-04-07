@@ -67,13 +67,13 @@ pub mod tests {
                 "./src/tests/cli/config/_arg_parse_test.opennars.hjson"
 
             /// OpenNARS
-            OPENNARS = "./src/tests/cli/config/opennars.hjson"
+            OPENNARS = "./src/tests/cli/config/cin_opennars.hjson"
             /// ONA
-            ONA = "./src/tests/cli/config/ona.hjson"
+            ONA = "./src/tests/cli/config/cin_ona.hjson"
             /// PyNARS
-            PYNARS = "./src/tests/cli/config/pynars.hjson"
+            PYNARS = "./src/tests/cli/config/cin_pynars.hjson"
             /// CXinJS
-            CXIN_JS = "./src/tests/cli/config/cxin_js.hjson"
+            CXIN_JS = "./src/tests/cli/config/cin_cxin_js.hjson"
 
             /// 预引入/NAL测试环境
             PRELUDE_TEST = "./src/tests/cli/config/prelude_test.hjson"
