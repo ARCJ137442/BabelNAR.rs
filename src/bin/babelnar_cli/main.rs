@@ -60,8 +60,8 @@ pub fn main_args(cwd: IoResult<PathBuf>, args: impl Iterator<Item = String>) -> 
         // 启动失败⇒打印错误信息，等待并退出
         Err(e) => {
             println_cli!([Error] "NARS运行时启动错误：{e}");
-            // 启用用户输入时延时提示
-            if let Some(true) = config.user_input {
+            // 空配置/启用用户输入⇒延时提示
+            if config.user_input.is_none() || config.user_input.unwrap() {
                 println_cli!([Info] "程序将在 3 秒后自动退出。。。");
                 sleep(Duration::from_secs(3));
             }
