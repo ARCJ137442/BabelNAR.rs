@@ -48,6 +48,7 @@ impl VmRuntime for CommandVmRuntime {
         if_return! { input.is_empty() => Ok(()) }
         // 置入
         // * 🚩没有换行符
+        // * 📌【2024-04-07 23:43:59】追踪「Websocket进程阻塞」漏洞：问题不在此，在`ws::Sender::send`处
         self.process.put_line(input)
     }
 

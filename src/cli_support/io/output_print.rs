@@ -175,6 +175,16 @@ macro_rules! eprintln_cli {
     };
 }
 
+/// 快捷打印宏/当输出为`Err`时打印，当Ok时为值
+#[macro_export]
+macro_rules! if_let_err_eprintln_cli {
+    { $value:expr => $e:ident => $($tail:tt)* } => {
+        if let Err($e) = $value {
+            eprintln_cli!($($tail)*);
+        }
+    };
+}
+
 impl<'a> From<&'a Output> for OutputType<'a> {
     fn from(out: &'a Output) -> Self {
         OutputType::Vm(out.type_name())

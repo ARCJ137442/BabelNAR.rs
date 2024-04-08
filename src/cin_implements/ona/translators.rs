@@ -39,6 +39,24 @@ use regex::{Captures, Regex};
 use util::OptionBoost;
 use util::{if_return, pipe};
 
+/// ONA已内置的操作列表
+/// * 🎯避免「重复操作注册」
+/// * 🎯【2024-04-07 23:12:56】兼容PyNARS的同时，不将自身搞崩
+/// * 📄首次出现场景：Matriangle Websocket服务器链接
+/// * 🔗参考：<https://github.com/opennars/OpenNARS-for-Applications/blob/2c6b7b966aa627818cb3eb4b2c0ae360bfada8c3/src/Shell.c#L37>
+pub const OPERATOR_NAME_LIST: &[&str] = &[
+    "left",
+    "right",
+    "up",
+    "down",
+    "say",
+    "pick",
+    "drop",
+    "go",
+    "activate",
+    "deactivate",
+];
+
 /// ONA的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「ONA Shell输入」
 pub fn input_translate(cmd: Cmd) -> Result<String> {
@@ -51,7 +69,10 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         // VOL指令：调整音量
         Cmd::VOL(n) => format!("*volume={n}"),
         // REG指令：注册操作
-        Cmd::REG { name } => format!("*setopname {} ^{name}", hash_operator_id(&name)),
+        Cmd::REG { name } => match OPERATOR_NAME_LIST.contains(&name.as_str()) {
+            true => String::new(),
+            false => format!("*setopname {} ^{name}", hash_operator_id(&name)),
+        },
         // 注释 ⇒ 忽略 | ❓【2024-04-02 22:43:05】可能需要打印，但这样却没法统一IO（到处print的习惯不好）
         Cmd::REM { .. } => String::new(),
         // 其它类型
@@ -95,8 +116,10 @@ fn hash_operator_id(_: &str) -> usize {
     // op_name.hash(&mut hasher);
     // (hasher.finish() % 10) as usize
 }
+
+/// 测试/获取注册的操作符id
 #[test]
-fn t() {
+fn test_hash_operator_id() {
     dbg!([
         hash_operator_id("left"),
         hash_operator_id("left"),

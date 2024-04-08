@@ -11,11 +11,11 @@ use babel_nar::{
             readline_iter::ReadlineIter,
         },
     },
-    eprintln_cli, println_cli,
+    eprintln_cli, if_let_err_eprintln_cli, println_cli,
     runtimes::TranslateError,
     test_tools::{nal_format::parse, put_nal, VmOutputCache},
 };
-use nar_dev_utils::{if_return, ResultBoost};
+use nar_dev_utils::{if_return, manipulate, pipe, ResultBoost};
 use navm::{
     cmd::Cmd,
     vm::{VmRuntime, VmStatus},
@@ -64,8 +64,38 @@ where
         Self {
             runtime: Arc::new(Mutex::new(runtime)),
             config: Arc::new(config),
-            output_cache: OutputCache::default_arc_mutex(),
+            // 创建的同时增加侦听器
+            output_cache: Self::new_output_cache(),
         }
+    }
+
+    /// 新建一个「输出缓存」
+    /// * 🚩创建缓存⇒增加侦听器⇒装入[`ArcMutex`]
+    /// * 🎯避免
+    fn new_output_cache() -> ArcMutex<OutputCache> {
+        pipe! {
+            manipulate!(
+                // 产生一个新的「输出缓存」
+                OutputCache::default()
+                // 添加侦听器
+                => Self::add_output_listener
+            )
+            // 装入ArcMutex
+            => Mutex::new => Arc::new
+        }
+    }
+
+    /// 增加「打印输出」侦听器
+    /// * 🎯（与Websocket一同）分离「输出侦听」逻辑
+    /// * 🎯统一给管理者添加功能
+    ///   * ❓后续可配置
+    fn add_output_listener(output_cache: &mut OutputCache) {
+        output_cache.output_handlers.add_handler(|output| {
+            // 打印输出
+            println_cli!(&output);
+            // 继续返回
+            Some(output)
+        });
     }
 
     /// 【主函数】在运行时启动后，对其进行管理
@@ -222,6 +252,7 @@ where
                 {
                     // 缓存输出
                     // * 🚩在缓存时格式化输出
+                    // TODO: 【2024-04-08 19:15:30】现在必须不再能直接`put`输出了：要兼容Websocket情形
                     match output_cache.lock() {
                         Ok(mut output_cache) => output_cache.put(output)?,
                         Err(e) => eprintln_cli!([Error] "缓存NAVM运行时输出时发生错误：{e}"),
@@ -237,8 +268,8 @@ where
     /// 生成「Websocket服务」子线程
     pub fn try_spawn_ws_server(&mut self) -> Result<Option<JoinHandle<Result<()>>>> {
         // 若有⇒启动
-        if let Some(config) = &self.config.websocket {
-            let thread = spawn_ws_server(self, &config.host, config.port);
+        if self.config.websocket.is_some() {
+            let thread = spawn_ws_server(self)?;
             return Ok(Some(thread));
         }
 
@@ -288,9 +319,10 @@ where
 
                 // 非空⇒解析输入并执行
                 if !line.trim().is_empty() {
-                    if let Err(e) = Self::input_line_to_vm(runtime, &line, &config, output_cache) {
-                        println_cli!([Error] "输入过程中发生错误：{e}")
-                    }
+                    if_let_err_eprintln_cli!(
+                        Self::input_line_to_vm(runtime, &line, &config, output_cache)
+                        => e => [Error] "输入过程中发生错误：{e}"
+                    );
                 }
             }
 

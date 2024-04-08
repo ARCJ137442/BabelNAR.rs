@@ -7,5 +7,8 @@ executables/
 # 临时文件
 *tempCodeRunnerFile*
 
+# 日志文件
+*.log
+
 # 测试用文件
 \[test\]*

@@ -2,8 +2,11 @@
 //! * 🎯一站式存储、展示与管理NAVM的输出
 //! * 🎯可被其它二进制库所复用
 
-use super::output_print::OutputType;
-use crate::{cli_support::error_handling_boost::error_anyhow, test_tools::VmOutputCache};
+use crate::{
+    cli_support::error_handling_boost::error_anyhow,
+    output_handler::flow_handler_list::{FlowHandlerList, HandleResult},
+    test_tools::VmOutputCache,
+};
 use anyhow::Result;
 use nar_dev_utils::ResultBoost;
 use navm::output::Output;
@@ -25,10 +28,12 @@ pub struct OutputCache {
     /// * 🚩【2024-04-03 01:43:41】不附带任何包装类型，仅包装其自身
     pub(crate) inner: Vec<Output>,
 
-    /// 内部封装的「发送者」列表
+    /// 流式侦听器列表
+    /// * 🎯用于功能解耦、易分派的「NAVM输出处理」
+    ///   * 📌可在此过程中对输出进行拦截、转换等操作
+    /// * 🎯CLI输出打印
     /// * 🎯Websocket输出回传（JSON）
-    /// TODO: 🏗️后续优化
-    pub websocket_senders: Vec<ws::Sender>,
+    pub output_handlers: FlowHandlerList<Output>,
 }
 
 /// 功能实现
@@ -37,7 +42,7 @@ impl OutputCache {
     pub fn new(inner: Vec<Output>) -> Self {
         Self {
             inner,
-            websocket_senders: Vec::new(),
+            output_handlers: FlowHandlerList::new(),
         }
     }
 
@@ -85,20 +90,14 @@ impl VmOutputCache for OutputCache {
     /// * 🎯统一的「打印输出」逻辑
     ///   * 🚩【2024-04-03 01:07:55】不打算封装了
     fn put(&mut self, output: Output) -> Result<()> {
-        // 打印输出
-        // * 🚩现在内置入「命令行支持」，不再能直接使用`println_cli`
-        OutputType::print_from_navm_output(&output);
-
-        // 回传JSON
-        // TODO: 待优化
-        for sender in &self.websocket_senders {
-            if let Err(e) = sender.send(output.to_json_string()) {
-                OutputType::Error.print_line(&format!("Websocket💬回传失败：{e}"));
-            }
+        // 交给处理者处理
+        let r = self.output_handlers.handle(output);
+        match r {
+            // 通过⇒静默加入输出
+            HandleResult::Passed(output) => self.put_silent(output),
+            // 被消耗⇒提示
+            HandleResult::Consumed(index) => Ok(println!("NAVM输出在[{index}]位置被拦截。")),
         }
-
-        // 静默加入输出
-        self.put_silent(output)
     }
 
     /// 遍历输出

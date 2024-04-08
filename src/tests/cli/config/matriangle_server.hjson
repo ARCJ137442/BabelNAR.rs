@@ -4,9 +4,15 @@
 {
     // Websocket服务端地址
     websocket: {
-        host: localhost
+        // * ❌【2024-04-07 23:05:21】不能是`localhost`，需要是`127.0.0.1`（Matriangle端要求）
+        host: 127.0.0.1
         port: 8765
     }
     // 【2024-04-04 04:49:32】Matriangle环境目前以「NAVM指令」的形式传入
     inputMode: cmd
+    preludeNAL: {
+        // 预置的NAL指令
+        // * 🔬【2024-04-08 15:43:27】控制程序输出：当产生大量输出时，将会发生线程死锁
+        text: "'''VOL 0"
+    }
 }

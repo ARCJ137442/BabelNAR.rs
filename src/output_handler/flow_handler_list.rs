@@ -16,6 +16,11 @@ pub enum HandleResult<Item, HandlerIndex> {
     Consumed(HandlerIndex),
 }
 
+/// 统一表示「输出处理者」
+/// * 🎯简化类型表示
+/// * 🚩【2024-04-08 21:04:47】因需进行线程共享，此闭包必须附带`Send`和`Sync`
+pub type DynOutputHandler<Item> = dyn FnMut(Item) -> Option<Item> + Send + Sync;
+
 /// 流式处理者列表
 /// * 🚩处理者的特征约束：`FnMut(Item) -> Option<Item>`
 /// * 📝不能显式声明「处理者」类型
@@ -24,11 +29,18 @@ pub enum HandleResult<Item, HandlerIndex> {
 pub struct FlowHandlerList<Item> {
     /// 存储所有的处理者
     /// * 🚩使用[`Box`]以容纳不同类型的闭包
-    handlers: Vec<Box<dyn FnMut(Item) -> Option<Item>>>,
+    handlers: Vec<Box<DynOutputHandler<Item>>>,
 
     /// 用于对未直接作为字段的`Item`类型的占位符
     /// * 🔗标准库文档：<https://rustwiki.org/zh-CN/std/marker/struct.PhantomData.html>
     _marker: PhantomData<Item>,
+}
+
+/// 实现调试呈现
+impl<Item> std::fmt::Debug for FlowHandlerList<Item> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FlowHandlerList(num={})", self.handlers.len())
+    }
 }
 
 impl<Item> FlowHandlerList<Item> {
@@ -44,7 +56,7 @@ impl<Item> FlowHandlerList<Item> {
     /// 构造函数/直接从[`Vec`]构造
     /// * 需要自己手动装箱
     /// * ℹ️若需构造一个空列表，可使用[`FlowHandlerList::default`]
-    pub fn from_vec(vec: Vec<Box<dyn FnMut(Item) -> Option<Item>>>) -> Self {
+    pub fn from_vec(vec: Vec<Box<DynOutputHandler<Item>>>) -> Self {
         Self {
             handlers: vec,
             _marker: PhantomData,
@@ -78,7 +90,7 @@ impl<Item> FlowHandlerList<Item> {
     // 对「处理者列表」的操作 //
 
     /// 获取某个位置的处理者（不可变）
-    pub fn get_handler(&self, index: usize) -> Option<&dyn FnMut(Item) -> Option<Item>> {
+    pub fn get_handler(&self, index: usize) -> Option<&DynOutputHandler<Item>> {
         // 获取指定位置的box，然后将其转为索引
         self.handlers.get(index).map(Box::as_ref)
     }
@@ -91,14 +103,17 @@ impl<Item> FlowHandlerList<Item> {
     // pub fn get_handler_mut(
     //     &mut self,
     //     index: usize,
-    // ) -> Option<&mut dyn FnMut(Item) -> Option<Item>> {
+    // ) -> Option<&mut DynOutputHandler<Item>> {
     //     self.handlers.get_mut(index).map(Box::as_mut)
     // }
 
     /// 添加新的处理者
     /// * ⚠️虽然结构体定义时无需对「处理者」类型约束为`'static`静态周期，
     ///   * 但此处传入作为参数（的函数指针）是需要的
-    pub fn add_handler(&mut self, handler: impl FnMut(Item) -> Option<Item> + 'static) {
+    pub fn add_handler(
+        &mut self,
+        handler: impl FnMut(Item) -> Option<Item> + Send + Sync + 'static,
+    ) {
         self.handlers.push(Box::new(handler))
     }
 }

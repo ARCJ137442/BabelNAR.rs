@@ -160,6 +160,15 @@ mod tests {
                 main($cin_path, &[])
             }
 
+
+            /// Matriangle服务器
+            /// * 🎯复现先前基于Matriangle环境的NARS实验
+            #[test]
+            pub fn main_matriangle_server() -> Result<()> {
+                // 以默认参数启动
+                main_configs($cin_path, &[MATRIANGLE_SERVER])
+            }
+
             $(
                 $(#[$attr])*
                 #[test]

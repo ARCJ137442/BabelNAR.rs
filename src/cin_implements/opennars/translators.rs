@@ -56,6 +56,7 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
 pub fn output_translate(content_raw: String) -> Result<Output> {
     // 根据冒号分隔一次，然后得到「头部」
     let (head, tail) = content_raw.split_once(':').unwrap_or(("", &content_raw));
+    let tail = tail.trim();
     // 根据「头部」生成输出
     let output = match &*head.to_uppercase() {
         "IN" => Output::IN {
@@ -89,7 +90,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             r#type: "ANTICIPATE".to_string(),
             // 先提取其中的Narsese | ⚠️借用了`content_raw`
             narsese: try_parse_narsese(tail)
-                .ok_or_run(|e| println!("【{head}】在解析Narsese时出现错误：{e}")),
+                .ok_or_run(|e| println!("【{head}】在解析Narsese「{tail}」时出现错误：{e}")),
             // 然后传入整个内容
             content: content_raw,
         },
@@ -119,7 +120,8 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
 pub fn parse_narsese_opennars(head: &str, tail: &str) -> Result<Option<Narsese>> {
     use util::ResultBoost;
     // ! ↓下方会转换为None
-    Ok(try_parse_narsese(tail).ok_or_run(|e| println!("【{head}】在解析Narsese时出现错误：{e}")))
+    Ok(try_parse_narsese(tail)
+        .ok_or_run(|e| println!("【{head}】在解析Narsese「{tail}」时出现错误：{e}")))
 }
 
 /// （OpenNARS）从原始输出中解析Narsese
@@ -181,20 +183,19 @@ fn parse_term_from_operation(term_str: &str) -> Result<Term> {
 }
 
 /// 切分尾部字符串，并（尝试）从中解析出Narsese
+/// * 🎯对OpenNARS中的「时间戳/证据基」做切分
+///   * 📄`<{SELF} --> [satisfied]>! :|: %1.00;0.90% {1269408|1269408 : (-8058943780727144183,628)}`
+///   * 🚩现在无需考虑：[`pest`]会自动忽略无关前缀
+///   * ❌在「无证据基case」如`ANTICIPATE: <{powerup_bad_x} --> [seen]>`中报错：把`{`截掉了
+/// * 📌此中`tail`已做好行切分
 fn try_parse_narsese(tail: &str) -> Result<Narsese> {
-    // 提取并解析Narsese字符串
-    let narsese = tail
-        // 去尾
-        .rfind('{')
-        // 截取 & 解析
-        .map(|right_index| parse_dialect_opennars(tail[..right_index].trim()));
+    // 提取并解析Narsese字符
     // 提取解析结果
+    let narsese = parse_dialect_opennars(tail);
     match narsese {
         // 解析成功⇒提取 & 返回
-        Some(Ok(narsese)) => Ok(narsese),
+        Ok(narsese) => Ok(narsese),
         // 解析失败⇒打印错误日志 | 返回None
-        Some(Err(err)) => Err(TranslateError::from(err).into()),
-        // 未找到括号的情况
-        None => Err(TranslateError::from("输出「OUT」解析失败：未找到「{」").into()),
+        Err(err) => Err(TranslateError::from(err).into()),
     }
 }
