@@ -135,6 +135,7 @@ fn test_hash_operator_id() {
 /// * 🚩直接根据选取的「头部」进行匹配
 /// 超参数：严格模式
 /// * 🚩测试环境下「输出Narsese解析失败」会上报错误
+/// TODO: 解决`Input: <(* {SELF}) --> ^left>. :|: occurrenceTime=119 Priority=1.000000 Truth: frequency=1.000000, confidence=0.900000`
 pub fn output_translate(content_raw: String) -> Result<Output> {
     // 特别处理
     if_return! {

@@ -295,6 +295,7 @@ where
             for io_result in ReadlineIter::default() {
                 // 从迭代器中读取一行
                 let line = io_result?;
+                let line = line.trim(); // ! 这两句无法合并：临时变量的引用问题
 
                 // 尝试获取运行时引用 | 仅有其它地方panic了才会停止
                 // ! 📝PoisonError无法在线程中传递
@@ -318,9 +319,9 @@ where
                     .transform_err(|e| anyhow!("获取NAVM输出缓存时发生错误：{e}"))?;
 
                 // 非空⇒解析输入并执行
-                if !line.trim().is_empty() {
+                if !line.is_empty() {
                     if_let_err_eprintln_cli!(
-                        Self::input_line_to_vm(runtime, &line, &config, output_cache)
+                        Self::input_line_to_vm(runtime, line, &config, output_cache)
                         => e => [Error] "输入过程中发生错误：{e}"
                     );
                 }
