@@ -74,6 +74,8 @@ pub mod tests {
             PYNARS = "./src/tests/cli/config/cin_pynars.hjson"
             /// CXinJS
             CXIN_JS = "./src/tests/cli/config/cin_cxin_js.hjson"
+            /// 原生IL-1
+            NATIVE_IL_1 = "./src/tests/cli/config/cin_native_il_1.hjson"
 
             /// 预引入/NAL测试环境
             PRELUDE_TEST = "./src/tests/cli/config/prelude_test.hjson"

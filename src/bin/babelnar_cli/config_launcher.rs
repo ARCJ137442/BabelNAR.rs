@@ -7,7 +7,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use babel_nar::{
     cin_implements::{
-        common::generate_command, cxin_js, nars_python, ona, openjunars, opennars, pynars,
+        common::generate_command, cxin_js, nars_python, native, ona, openjunars, opennars, pynars,
     },
     cli_support::{cin_search::name_match::name_match, io::readline_iter::ReadlineIter},
     eprintln_cli, println_cli,
@@ -199,6 +199,7 @@ pub type TranslatorDict<'a> = &'a [(
 /// 输入转译器的索引字典
 /// * 🚩静态存储映射，后续遍历可有序可无序
 pub const TRANSLATOR_DICT: TranslatorDict = &[
+    ("Native", native::input_translate, native::output_translate),
     (
         "OpenNARS",
         opennars::input_translate,

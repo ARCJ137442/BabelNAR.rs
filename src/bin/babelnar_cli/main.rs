@@ -321,6 +321,39 @@ mod tests {
         }
     }
 
+    /// 测试/原生IL-1
+    mod native_il_1 {
+        use super::*;
+
+        cin_tests! {
+            NATIVE_IL_1;
+
+            /// 简单演绎
+            /// * 📝✅【2024-04-09 21:12:10】成功
+            nal_de => NAL_SIMPLE_DEDUCTION
+
+            /// 高阶演绎
+            /// * 📝❌【2024-04-09 21:12:32】失败：尚不支持
+            nal_hi => NAL_HIGHER_DEDUCTION
+
+            /// 自变量消除
+            /// * 📝❌【2024-04-09 21:12:32】失败：尚不支持
+            nal_ie => NAL_I_VAR_ELIMINATION
+
+            /// 时间归纳
+            /// * 📝❌【2024-04-09 21:12:32】失败：尚不支持
+            nal_te => NAL_TEMPORAL_INDUCTION
+
+            /// 简单操作
+            /// * 📝❌【2024-04-09 21:12:32】失败：尚不支持
+            nal_so => NAL_SIMPLE_OPERATION
+
+            /// 操作
+            /// * 📝❌【2024-04-09 21:12:32】失败：尚不支持
+            nal_op => NAL_OPERATION
+        }
+    }
+
     // ! ❌【2024-04-07 14:39:20】接口完成度不高的NARS-Python、OpenJunars暂不进行测试
 
     /// 测试入口/带Websocket Shell
