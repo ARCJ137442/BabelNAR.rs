@@ -9,6 +9,7 @@ executables/
 
 # 日志文件
 *.log
+*.log.*
 
 # 测试用文件
 \[test\]*

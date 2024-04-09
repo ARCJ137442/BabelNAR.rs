@@ -29,7 +29,7 @@ cyc_uint = { ASCII_DIGIT+ }
 /// 注释（静默）
 /// * 🚩包括「输出预期」等「魔法注释」
 comment = _{
-    comment_head ~ (comment_navm_cmd | comment_sleep | comment_await | comment_expect_contains | comment_terminate | comment_raw)
+    comment_head ~ (comment_navm_cmd | comment_sleep | comment_await | comment_expect_contains | comment_save_outputs | comment_terminate | comment_raw)
 }
 
 /// 注释的头部字符（静默）
@@ -67,6 +67,13 @@ comment_await = {
 comment_expect_contains = {
     // 额外的前缀
     "'expect-contains:" ~ output_expectation
+}
+
+/// 有关「保存输出」的「魔法注释」
+/// ✨存储缓存的所有输出到指定路径下的文件（阻塞主线程）
+comment_save_outputs = {
+    // 额外的前缀
+    "'save-outputs:" ~ output_expectation
 }
 
 /// 有关「终止」的「魔法注释」

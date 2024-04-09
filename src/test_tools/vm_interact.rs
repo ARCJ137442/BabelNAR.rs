@@ -1,6 +1,6 @@
 //! 与NAVM虚拟机的交互逻辑
 
-use std::ops::ControlFlow;
+use std::{ops::ControlFlow, path::Path};
 
 use crate::cli_support::error_handling_boost::error_anyhow;
 
@@ -198,7 +198,7 @@ pub trait VmOutputCache {
     /// * 🚩不是返回迭代器，而是用闭包开始计算
     /// * 📝使用最新的「控制流」数据结构
     ///   * 使用[`None`]代表「一路下来没`break`」
-    fn for_each<T>(&self, f: impl Fn(&Output) -> ControlFlow<T>) -> Result<Option<T>>;
+    fn for_each<T>(&self, f: impl FnMut(&Output) -> ControlFlow<T>) -> Result<Option<T>>;
 }
 
 /// 向虚拟机置入[`NALInput`]
@@ -211,6 +211,7 @@ pub fn put_nal(
     output_cache: &mut impl VmOutputCache,
     // 不能传入「启动配置」，就要传入「是否启用用户输入」状态变量
     enabled_user_input: bool,
+    nal_root_path: &Path,
 ) -> Result<()> {
     match input {
         // 置入NAVM指令
@@ -264,6 +265,34 @@ pub fn put_nal(
             //     if expectation.matches(output) {
             //     }
             // }
+        }
+        // 保存（所有）输出
+        // * 🚩输出到一个文本文件中
+        // * ✨复合JSON「对象数组」格式
+        NALInput::SaveOutputs(path_str) => {
+            // 先收集所有输出的字符串
+            let mut file_str = "[".to_string();
+            output_cache.for_each(|output| {
+                // 换行制表
+                file_str += "\n\t";
+                // 统一追加到字符串中
+                file_str += &output.to_json_string();
+                // 逗号
+                file_str.push(',');
+                // 继续
+                ControlFlow::<()>::Continue(())
+            })?;
+            // 删去尾后逗号
+            file_str.pop();
+            // 换行，终止符
+            file_str += "\n]";
+            // 保存到文件中 | 使用基于`nal_root_path`的相对路径
+            let path = nal_root_path.join(path_str.trim());
+            std::fs::write(path, file_str)?;
+            // 提示 | ❌【2024-04-09 22:22:04】执行「NAL输入」时，应始终静默
+            // println_cli!([Info] "已将所有NAVM输出保存到文件{path:?}");
+            // 返回
+            Ok(())
         }
         // 终止虚拟机
         NALInput::Terminate {

@@ -22,7 +22,8 @@ use navm::{
 };
 use std::{
     fmt::Debug,
-    ops::{ControlFlow, ControlFlow::Break, ControlFlow::Continue},
+    ops::ControlFlow::{self, Break, Continue},
+    path::Path,
     sync::{Arc, Mutex},
     thread::{self, sleep, JoinHandle},
     time::Duration,
@@ -208,10 +209,22 @@ where
                 LaunchConfigPreludeNAL::Text(nal) => nal.to_string(),
             };
 
+            // 获取「NAL执行路径」
+            // * 🎯在「预置NAL」中执行「保存文件」时，决定以哪个路径为「相对路径起点」
+            let nal_file_path = match prelude_nal {
+                // 文件⇒基于文件路径
+                LaunchConfigPreludeNAL::File(path) => {
+                    path.parent().unwrap_or(&self.config.config_path)
+                }
+                // 纯文本⇒直接引入
+                LaunchConfigPreludeNAL::Text(..) => &self.config.config_path,
+            };
+
             // 输入NAL并处理
             // * 🚩【2024-04-03 11:10:44】遇到错误，统一上报
             //   * 根据「严格模式」判断要「继续」还是「终止」
-            let put_result = Self::input_nal_to_vm(runtime, &nal, output_cache, config);
+            let put_result =
+                Self::input_nal_to_vm(runtime, &nal, output_cache, config, nal_file_path);
             match self.config.strict_mode {
                 false => Continue(put_result),
                 true => Break(put_result),
@@ -321,7 +334,8 @@ where
                 // 非空⇒解析输入并执行
                 if !line.is_empty() {
                     if_let_err_eprintln_cli!(
-                        Self::input_line_to_vm(runtime, line, &config, output_cache)
+                        // * 🚩【2024-04-09 22:11:41】置入时以「配置文件所在目录」为NAL工作目录
+                        Self::input_line_to_vm(runtime, line, &config, output_cache, &config.config_path)
                         => e => [Error] "输入过程中发生错误：{e}"
                     );
                 }
@@ -336,18 +350,28 @@ where
     }
 
     /// 置入一行输入
+    /// * 📄`nal_root_path`：从NAL文件加载⇒NAL文件所在路径；用户输入⇒配置文件所在路径
     pub fn input_line_to_vm(
         runtime: &mut R,
         line: &str,
         config: &RuntimeConfig,
         output_cache: &mut OutputCache,
+        nal_root_path: &Path,
     ) -> Result<()> {
         // 向运行时输入
         match config.input_mode {
             // NAVM指令
-            InputMode::Cmd => Self::input_cmd_to_vm(runtime, line),
+            // * ✨【2024-04-09 22:48:01】转义输入：使用（NAVM指令不可能用的）前缀「/」以重新启用「NAL输入」
+            InputMode::Cmd => match line.starts_with('/') {
+                true => {
+                    Self::input_nal_to_vm(runtime, &line[1..], output_cache, config, nal_root_path)
+                }
+                false => Self::input_cmd_to_vm(runtime, line),
+            },
             // NAL输入
-            InputMode::Nal => Self::input_nal_to_vm(runtime, line, output_cache, config),
+            InputMode::Nal => {
+                Self::input_nal_to_vm(runtime, line, output_cache, config, nal_root_path)
+            }
         }
     }
 
@@ -371,6 +395,7 @@ where
         input: &str,
         output_cache: &mut OutputCache,
         config: &RuntimeConfig,
+        nal_root_path: &Path, // 📄从NAL文件加载⇒NAL文件所在路径；用户输入⇒配置文件所在路径
     ) -> Result<()> {
         // 解析输入，并遍历解析出的每个NAL输入
         for input in parse(input) {
@@ -385,7 +410,13 @@ where
                 }
                 Ok(nal) => {
                     // 尝试置入NAL输入 | 为了错误消息，必须克隆
-                    let put_result = put_nal(runtime, nal.clone(), output_cache, config.user_input);
+                    let put_result = put_nal(
+                        runtime,
+                        nal.clone(),
+                        output_cache,
+                        config.user_input,
+                        nal_root_path,
+                    );
                     // 处理错误
                     if let Err(e) = put_result {
                         // 无论是否严格模式，都报告错误

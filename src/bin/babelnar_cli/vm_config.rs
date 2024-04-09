@@ -103,6 +103,15 @@ macro_rules! coalesce_clones {
 #[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct LaunchConfig {
+    /// 配置的加载路径
+    /// * 🎯用于记录「基于配置自身的配置路径」
+    /// * 🚩从文件中加载⇒`Some(配置文件所在目录)`
+    /// * 🚩从其它加载⇒[`None`]
+    /// * 📌不在反序列化（解析）时解析
+    #[serde(skip)]
+    #[serde(default)]
+    pub config_path: Option<PathBuf>,
+
     /// 启动配置的文本描述
     /// * 🎯在自动搜索时呈现给用户
     /// * 📌一般是单行文本
@@ -160,6 +169,7 @@ pub struct LaunchConfig {
 /// * ✅与此同时，实现了「有提醒的后期维护」
 ///   * 📌后续若新增字段，此处会因「缺字段」立即报错
 const EMPTY_LAUNCH_CONFIG: LaunchConfig = LaunchConfig {
+    config_path: None,
     description: None,
     translators: None,
     command: None,
@@ -178,6 +188,13 @@ const EMPTY_LAUNCH_CONFIG: LaunchConfig = LaunchConfig {
 #[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeConfig {
+    /// 配置的加载路径
+    /// * 🎯用于记录「基于配置自身的配置路径」
+    /// * 🚩从文件中加载⇒配置文件所在目录
+    /// * 🚩从其它加载⇒[`PathBuf::new`]
+    #[serde(skip)]
+    pub config_path: PathBuf,
+
     /// 转译器组合
     /// * 🚩运行时必须提供转译器
     /// * 📌【2024-04-04 02:11:44】即便是所谓「默认」转译器，使用「及早报错」避免非预期运行
@@ -231,6 +248,10 @@ const fn bool_true() -> bool {
     true
 }
 
+/// 布尔值`false`
+/// * 🎯配置解析中「默认为`false`」的默认值指定
+/// * 📝serde中，`#[serde(default)]`使用的是[`bool::default`]而非容器的`default`
+///   * 因此需要指定一个函数来初始化（false特别标识）
 #[inline(always)]
 const fn bool_false() -> bool {
     false
@@ -246,6 +267,8 @@ impl TryFrom<LaunchConfig> for RuntimeConfig {
 
     fn try_from(config: LaunchConfig) -> Result<Self> {
         Ok(Self {
+            // * 路径承袭：空值自动补默认值（空白）
+            config_path: config.config_path.unwrap_or_default(),
             // * 🚩必选项统一用`ok_or(..)?`
             translators: config.translators.ok_or(anyhow!("启动配置缺少转译器"))?,
             command: config.command.ok_or(anyhow!("启动配置缺少启动命令"))?,
@@ -458,11 +481,16 @@ impl LaunchConfig {
         Ok(())
     }
 
-    /// 变基配置中所含的路径，从其它地方变为
+    /// 变基配置中所含的路径，从其它地方变为「以配置文件自身为根」的绝对路径
     /// * 🎯解决「配置中的**相对路径**仅相对于exe而非配置文件本身」的问题
     /// * 🎯将配置中相对路径的**根目录**从「exe」变更到配置文件本身
     /// * 📌原则：由此消灭所有相对路径，均以「配置文件自身路径」为根，转换为绝对路径
+    /// * 一同决定的还有其中的[`Self::config_path`]字段
     pub fn rebase_relative_path_from(&mut self, config_path: &Path) -> Result<()> {
+        // 配置所在目录
+        if let Some(root) = config_path.parent() {
+            self.config_path = Some(root.to_path_buf());
+        }
         // 预加载NAL
         if let Some(LaunchConfigPreludeNAL::File(ref mut path)) = &mut self.prelude_nal {
             Self::rebase_relative_path(config_path, path)?;

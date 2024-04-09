@@ -132,6 +132,12 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
             let output_expectation = fold_pest_output_expectation(output_expectation)?;
             Ok(NALInput::ExpectContains(output_expectation))
         }
+        // 魔法注释/保存输出
+        Rule::comment_save_outputs => {
+            // 取其中唯一一个「输出预期」
+            let file_path = pair.into_inner().next().unwrap().as_str().into();
+            Ok(NALInput::SaveOutputs(file_path))
+        }
         // 魔法注释/终止
         Rule::comment_terminate => {
             // 预置默认值

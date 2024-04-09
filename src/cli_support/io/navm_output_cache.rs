@@ -102,7 +102,7 @@ impl VmOutputCache for OutputCache {
 
     /// 遍历输出
     /// * 🚩不是返回迭代器，而是用闭包开始计算
-    fn for_each<T>(&self, f: impl Fn(&Output) -> ControlFlow<T>) -> Result<Option<T>> {
+    fn for_each<T>(&self, mut f: impl FnMut(&Output) -> ControlFlow<T>) -> Result<Option<T>> {
         // 遍历
         for output in self.inner.iter() {
             // 基于控制流的运行

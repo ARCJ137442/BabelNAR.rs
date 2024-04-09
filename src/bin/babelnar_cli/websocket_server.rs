@@ -169,6 +169,7 @@ where
                 &msg.to_string(),
                 config,
                 output_cache,
+                &config.config_path
             )
             => err => [Error] "在Websocket连接中输入「{msg}」时发生错误：{err}"
         }
