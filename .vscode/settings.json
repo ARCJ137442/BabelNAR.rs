@@ -1,0 +1,30 @@
+{
+    "rust-analyzer.cargo.features": "all",
+    "editor.formatOnSave": true,
+    "cSpell.words": [
+        "Addrs",
+        "boardcaster",
+        "canonicalize",
+        "clearscreen",
+        "confy",
+        "cxin",
+        "deser",
+        "Errno",
+        "hasher",
+        "hjson",
+        "Nalifier",
+        "nanos",
+        "openjunars",
+        "rfind",
+        "runpy",
+        "setopname",
+        "thiserror",
+        "traceback",
+        "tstate",
+        "whatwarmer"
+    ],
+    "rust-analyzer.linkedProjects": [
+        ".\\Cargo.toml",
+        // ".\\Cargo.toml"
+    ],
+}

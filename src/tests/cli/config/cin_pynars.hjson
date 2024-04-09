@@ -1,0 +1,15 @@
+// PyNARS的启动配置
+{
+    translators: pynars
+    command: {
+        cmd: python
+        cmdArgs: [
+            "-m"
+            // * 🚩【2024-04-07 14:41:20】使用扩展了「附加指令」的「高级控制台」
+            pynars.ConsolePlus
+        ]
+        // * 🚩【2024-04-07 14:26:30】现在「CIN测试用运行时」路径已固定
+        currentDir: ./../../../../executables/PyNARS
+    }
+    autoRestart: true
+}

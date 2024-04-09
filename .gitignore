@@ -1,4 +1,15 @@
 /target
 
 # 可执行文件
+# * 🚩【2024-04-07 08:42:13】目前内置被忽略的CIN可执行文件，用于稳定的测试代码编写
 executables/
+
+# 临时文件
+*tempCodeRunnerFile*
+
+# 日志文件
+*.log
+*.log.*
+
+# 测试用文件
+\[test\]*
