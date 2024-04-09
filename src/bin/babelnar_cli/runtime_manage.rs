@@ -265,7 +265,6 @@ where
                 {
                     // 缓存输出
                     // * 🚩在缓存时格式化输出
-                    // TODO: 【2024-04-08 19:15:30】现在必须不再能直接`put`输出了：要兼容Websocket情形
                     match output_cache.lock() {
                         Ok(mut output_cache) => output_cache.put(output)?,
                         Err(e) => eprintln_cli!([Error] "缓存NAVM运行时输出时发生错误：{e}"),

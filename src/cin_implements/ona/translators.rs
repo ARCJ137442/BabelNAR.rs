@@ -25,6 +25,7 @@
 use super::dialect::parse as parse_dialect_ona;
 use crate::{
     cin_implements::ona::{fold_pest_compound, DialectParser, Rule},
+    cli_support::io::output_print::OutputType,
     runtimes::TranslateError,
 };
 use anyhow::Result;
@@ -180,6 +181,13 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             operation: parse_operation_ona(&content_raw)?,
             content_raw,
         },
+        // * 🚩对于「决策预期→ANTICIPATE」的特殊语法
+        // * 🚩【2024-04-02 18:45:17】仅截取`executed with args`，不截取`executed by NAR`
+        _ if content_raw.contains("decision expectation=") => Output::UNCLASSIFIED {
+            r#type: "ANTICIPATE".into(),
+            narsese: parse_anticipate_ona(&content_raw)?,
+            content: content_raw,
+        },
         // 若是连续的「头部」⇒识别为「未归类」类型
         _ if !content_raw.contains(char::is_whitespace) => Output::UNCLASSIFIED {
             r#type: head.into(),
@@ -244,6 +252,33 @@ pub fn parse_operation_ona(content_raw: &str) -> Result<Operation> {
     }
 }
 
+/// （ONA）从原始输出中解析「ANTICIPATE」预期
+/// * 🚩通过「前缀正则截取」分割并解析随后Narsese获得
+/// * 📄`"decision expectation=0.502326 implication: <((<{SELF} --> [good]> &/ <a --> b>) &/ <(* {SELF}) --> ^left>) =/> <{SELF} --> [good]>>. Truth: frequency=0.872512 confidence=0.294720 dt=12.000000 precondition: (<{SELF} --> [good]> &/ <a --> b>). :|: Truth: frequency=1.000000 confidence=0.360000 occurrenceTime=35124\n"`
+/// * 📄`"decision expectation=0.578198 implication: <(a &/ ^left) =/> g>. Truth: frequency=1.000000 confidence=0.241351 dt=1.000000 precondition: a. :|: Truth: frequency=1.000000 confidence=0.900000 occurrenceTime=4\n"`
+pub fn parse_anticipate_ona(content_raw: &str) -> Result<Option<Narsese>> {
+    // 正则捕获
+    let re_operation = Regex::new(r"implication:\s*(.*)\s*dt=").unwrap();
+    let captures = re_capture(&re_operation, content_raw.trim())?;
+    match captures {
+        Some(captures) => {
+            // 获取内容
+            let narsese_content = captures[1].to_string();
+            // 解析
+            let parse_result =
+                parse_narsese_ona("ANTICIPATE", narsese_content.trim()).inspect_err(|e| {
+                    OutputType::Error.eprint_line(&format!("ONA「预期」解析失败：{e}"));
+                });
+            // 返回
+            parse_result
+        }
+        // 截取失败的情形
+        None => {
+            OutputType::Error.eprint_line(&format!("ONA「预期」正则捕获失败：{content_raw:?}"));
+            Ok(None)
+        }
+    }
+}
 /// 操作参数提取
 /// * 🎯从一个解析出来的词项中提取出「操作参数列表」
 /// * 🚩测试环境中仅允许「复合词项」被解包
