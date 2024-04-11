@@ -73,7 +73,7 @@ checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 
 [[package]]
 name = "babel_nar"
-version = "0.20.1"
+version = "0.20.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -568,7 +568,7 @@ dependencies = [
 
 [[package]]
 name = "navm"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "anyhow",
  "nar_dev_utils",

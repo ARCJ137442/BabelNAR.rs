@@ -32,7 +32,7 @@ use anyhow::Result;
 use narsese::lexical::{Narsese, Term};
 use navm::{
     cmd::Cmd,
-    output::{Operation, Output},
+    output::{type_names::ANTICIPATE, Operation, Output},
 };
 use pest::Parser;
 use regex::{Captures, Regex};
@@ -149,15 +149,15 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
     // 根据冒号分隔一次，然后得到「头部」
     let (head, tail) = content_raw.split_once(':').unwrap_or(("", ""));
     // 根据「头部」生成输出
+    // * 🚩此处不直接使用NAVM输出中的「头部字串常量」主要考虑是「此为ONA特有」
     let output = match head.to_lowercase().as_str() {
-        "answer" => Output::ANSWER {
+        // 回答，但排除「似是而非」的`Answer: None.`
+        // * 🚩ONA会输出带有误导性的`Answer: None.`
+        //   * 看起来是回答，实际上不是
+        // * 🚩【2024-04-11 23:01:50】现在将`Answer: None.`开除出「回答」的输出格式
+        "answer" if !content_raw.contains("Answer: None.") => Output::ANSWER {
             // 先提取其中的Narsese | ⚠️借用了`content_raw`
-            // * 🚩ONA会输出带有误导性的`Answer: None.`
-            //   * 看起来是回答，实际上不是
-            narsese: match content_raw.contains("Answer: None.") {
-                true => None,
-                false => parse_narsese_ona(head, tail)?,
-            },
+            narsese: parse_narsese_ona(head, tail)?,
             // 然后传入整个内容
             content_raw,
         },
@@ -184,7 +184,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
         // * 🚩对于「决策预期→ANTICIPATE」的特殊语法
         // * 🚩【2024-04-02 18:45:17】仅截取`executed with args`，不截取`executed by NAR`
         _ if content_raw.contains("decision expectation=") => Output::UNCLASSIFIED {
-            r#type: "ANTICIPATE".into(),
+            r#type: ANTICIPATE.into(),
             narsese: parse_anticipate_ona(&content_raw)?,
             content: content_raw,
         },
@@ -266,7 +266,7 @@ pub fn parse_anticipate_ona(content_raw: &str) -> Result<Option<Narsese>> {
             let narsese_content = captures[1].to_string();
             // 解析
             let parse_result =
-                parse_narsese_ona("ANTICIPATE", narsese_content.trim()).inspect_err(|e| {
+                parse_narsese_ona(ANTICIPATE, narsese_content.trim()).inspect_err(|e| {
                     OutputType::Error.eprint_line(&format!("ONA「预期」解析失败：{e}"));
                 });
             // 返回
@@ -413,6 +413,7 @@ fn reform_output_to_narsese(out: &str) -> String {
 mod test {
     use super::*;
     use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
+    use navm::output::type_names::ANSWER;
     use util::asserts;
 
     /// 测试/正则重整
@@ -660,6 +661,10 @@ mod test {
         decision expectation=0.578198 implication: <(A &/ <(* {SELF}) --> ^op>) =/> G>. Truth: frequency=1.000000 confidence=0.241351 dt=1.000000 precondition: A. :|: Truth: frequency=1.000000 confidence=0.900000 occurrenceTime=4
         ^op executed with args (* {SELF})
         Input: <(* {SELF}) --> ^op>. :|: occurrenceTime=5 Priority=1.000000 Truth: frequency=1.000000, confidence=0.900000
+
+        A.
+        B?
+        Answer: None.
         " // 【2024-03-29 16:58:32】省略的「操作注册」语法：`*setopname 1 ^op`
         // 初步数据处理
         .split('\n')
@@ -670,8 +675,15 @@ mod test {
         for output in outputs {
             // ! 测试环境下[`parse_narsese_ona`]会强制要求「Narsese内容解析成功」
             let o = output_translate(output.into()).expect("输出解析失败");
+            // * 📌测试不能放过`Answer: None.`这个「不是回答的『回答』」
+            // * 🚩「是回答」与「内容为`Answer: None.`」不能共存
+            assert!(!(o.is_type(ANSWER) && o.raw_content().contains("None.")));
+            // 正常解析并展示Narsese
             if let Some(narsese) = o.get_narsese() {
                 println!("{}", FORMAT_ASCII.format_narsese(narsese))
+            }
+            else {
+                println!("[{}] {}", o.type_name(), o.raw_content())
             }
         }
     }
