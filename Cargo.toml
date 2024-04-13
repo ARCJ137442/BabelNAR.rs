@@ -6,8 +6,8 @@ description = """
 Implementation and application supports of the NAVM model
 """
 
-readme = "README.md"
-keywords = ["NARS", "Non-Axiomatic-Reasoning", "NAVM"]
+readme = "README.md" # ! ⚠️↓crates.io的每个关键词长度不能超过20字符
+keywords = ["NARS", "Non-Axiomatic-Logic", "NAVM"]
 
 license = "MIT OR Apache-2.0"
 categories = [
