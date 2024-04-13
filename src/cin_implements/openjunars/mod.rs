@@ -42,11 +42,34 @@ mod tests {
             .expect("无法输入指令");
 
         // 等待四秒钟，让Junars启动
-        std::thread::sleep(std::time::Duration::from_secs(1));
+        std::thread::sleep(std::time::Duration::from_secs(4));
 
         vm.input_cmd(Cmd::NSE(nse_task!(<A --> B>.)))
             .expect("无法输入指令");
-        std::thread::sleep(std::time::Duration::from_secs(6));
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        vm.input_cmd(Cmd::CYC(1)).expect("无法输入指令");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        vm.input_cmd(Cmd::NSE(nse_task!(<A --> B>?)))
+            .expect("无法输入指令");
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
+        vm.input_cmd(Cmd::CYC(1)).expect("无法输入指令");
+
+        std::thread::sleep(std::time::Duration::from_secs(3));
+
+        // 尝试截获其所有输出
+        // * 🚩【2024-04-13 16:10:27】目前经由Julia侧`flush(stdout)`，仍然无法捕获
+        // * 有输出`[ Info: Answer: <A-->B>. %1.0;0.9%`，但无法被程序捕获为文本
+        while let Ok(Some(output)) = vm.try_fetch_output() {
+            dbg!(output);
+        }
+
+        std::thread::sleep(std::time::Duration::from_secs(2));
 
         // 终止虚拟机运行时
         vm.terminate().expect("无法终止虚拟机");

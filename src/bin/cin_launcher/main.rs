@@ -32,7 +32,7 @@ const TEST_PATH_PYNARS: (&str, &str) = (PYNARS_ROOT, "pynars.ConsolePlus");
 /// 启动并获取NARS
 /// * 🚩【2024-03-27 18:55:07】目前就返回一个测试用的运行时
 /// * 🎯敏捷开发用
-fn get_nars() -> impl VmLauncher<CommandVmRuntime> {
+fn get_nars() -> impl VmLauncher<Runtime = CommandVmRuntime> {
     // OpenNARS::new(TEST_PATH_OPENNARS)
     PyNARS::new(TEST_PATH_PYNARS.0, TEST_PATH_PYNARS.1)
     // ONA::new(TEST_PATH_ONA)

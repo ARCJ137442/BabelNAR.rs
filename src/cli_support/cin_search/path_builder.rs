@@ -17,7 +17,7 @@ use std::path::Path;
 pub trait CinPathBuilder {
     /// 搜索结果的启动器类型
     /// * 📌启动后变为[`CinSearch::Runtime`]运行时类型
-    type Launcher: VmLauncher<Self::Runtime>;
+    type Launcher: VmLauncher;
 
     /// 搜索结果的运行时类型
     type Runtime: VmRuntime;

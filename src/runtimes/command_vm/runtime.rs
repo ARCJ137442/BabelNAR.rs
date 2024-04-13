@@ -96,7 +96,8 @@ impl VmRuntime for CommandVmRuntime {
 }
 
 /// 构建功能：启动命令行虚拟机
-impl VmLauncher<CommandVmRuntime> for CommandVm {
+impl VmLauncher for CommandVm {
+    type Runtime = CommandVmRuntime;
     fn launch(self) -> Result<CommandVmRuntime> {
         Ok(CommandVmRuntime {
             // 状态：正在运行
