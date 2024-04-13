@@ -43,7 +43,8 @@ impl OpenNARS {
 }
 
 /// 启动到「命令行运行时」
-impl VmLauncher<CommandVmRuntime> for OpenNARS {
+impl VmLauncher for OpenNARS {
+    type Runtime = CommandVmRuntime;
     fn launch(self) -> Result<CommandVmRuntime> {
         // 构造指令
         // * 🚩细致的Java参数配置，都外包给[`CommandGeneratorJava`]

@@ -112,7 +112,7 @@ pub mod tests {
             PYNARS_MODULE = "pynars.ConsolePlus"
             NARS_PYTHON = "./executables/nars-python-main.exe"
             CXIN_JS = "./executables/cxin-nars-shell.js"
-            OPENJUNARS = "./executables/OpenJunars/run.jl"
+            OPENJUNARS = "./executables/OpenJunars/launch.jl"
         }
     }
 

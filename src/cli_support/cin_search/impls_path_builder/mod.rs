@@ -29,7 +29,7 @@ pub fn file_name_matches(path: &Path, name: &str) -> bool {
 
 /// 从遍历者中找到匹配的所有启动器
 /// * 🎯仅搜索出「可能有效，故构建好」的启动器
-pub fn launchers_from_walker<R: VmRuntime, L: VmLauncher<R>>(
+pub fn launchers_from_walker<R: VmRuntime, L: VmLauncher>(
     path_walker: impl PathWalker,
     path_builder: impl CinPathBuilder<Launcher = L, Runtime = R>,
 ) -> Vec<(L, usize)> {
@@ -41,7 +41,7 @@ pub fn launchers_from_walker<R: VmRuntime, L: VmLauncher<R>>(
 }
 
 /// 类似[`launchers_from_walker`]，但根据返回的「匹配度」从高到底排序
-pub fn launchers_from_walker_sorted<R: VmRuntime, L: VmLauncher<R>>(
+pub fn launchers_from_walker_sorted<R: VmRuntime, L: VmLauncher>(
     path_walker: impl PathWalker,
     path_builder: impl CinPathBuilder<Launcher = L, Runtime = R>,
 ) -> Vec<L> {

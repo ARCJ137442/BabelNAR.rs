@@ -36,7 +36,8 @@ impl PyNARS {
 }
 
 /// 启动到「命令行运行时」
-impl VmLauncher<CommandVmRuntime> for PyNARS {
+impl VmLauncher for PyNARS {
+    type Runtime = CommandVmRuntime;
     fn launch(self) -> Result<CommandVmRuntime> {
         // 构造指令
         let command = self.command_generator.generate_command();

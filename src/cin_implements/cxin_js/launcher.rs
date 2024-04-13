@@ -39,7 +39,8 @@ impl CXinJS {
 }
 
 /// 启动到「命令行运行时」
-impl VmLauncher<CommandVmRuntime> for CXinJS {
+impl VmLauncher for CXinJS {
+    type Runtime = CommandVmRuntime;
     fn launch(self) -> Result<CommandVmRuntime> {
         // 构造并启动虚拟机
         pipe! {
