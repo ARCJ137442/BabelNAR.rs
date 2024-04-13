@@ -376,6 +376,8 @@ fn reform_output_to_narsese(out: &str) -> String {
     let re_truth = Regex::new(r"Truth:\s*frequency=([0-9.]+),\s*confidence=([0-9.]+)").unwrap();
     // 匹配ONA输出的「创建时间」⇒删去
     let re_creation_t = Regex::new(r"creationTime=([0-9.]+)\s+").unwrap();
+    // 匹配ONA输出的「发生时间」⇒删去
+    let re_occurrence_t = Regex::new(r"occurrenceTime=([0-9.]+)\s+").unwrap();
     // 匹配ONA输出的「时间递进」⇒删去
     let re_dt = Regex::new(r"dt=([0-9.]+)\s+").unwrap();
     // 匹配ONA输出的「优先级」⇒删去
@@ -395,6 +397,9 @@ fn reform_output_to_narsese(out: &str) -> String {
         => #{&}
         // 删去非必要的「创建时间」
         => [re_creation_t.replace_all](_, "")
+        => #{&} // 必须借用
+        // 删去非必要的「发生时间」
+        => [re_occurrence_t.replace_all](_, "")
         => #{&} // 必须借用
         // 删去非必要的「递进时间」
         => [re_dt.replace_all](_, "")
@@ -681,8 +686,7 @@ mod test {
             // 正常解析并展示Narsese
             if let Some(narsese) = o.get_narsese() {
                 println!("{}", FORMAT_ASCII.format_narsese(narsese))
-            }
-            else {
+            } else {
                 println!("[{}] {}", o.type_name(), o.raw_content())
             }
         }
