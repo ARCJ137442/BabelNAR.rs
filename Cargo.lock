@@ -575,6 +575,8 @@ dependencies = [
 [[package]]
 name = "navm"
 version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcaacc0e150da6d931c9bd71be0b4168c1bac253d5439d1c10dde33862de998b"
 dependencies = [
  "anyhow",
  "nar_dev_utils",
