@@ -93,6 +93,11 @@ where
     fn add_output_listener(output_cache: &mut OutputCache) {
         output_cache.output_handlers.add_handler(|output| {
             // 打印输出
+            // * 🚩【2024-04-13 17:57:32】暂不启用「详细输出」模式：尚未解决「详细输出后过长，但因信息取舍不能省掉『原始信息』」的问题
+            // * 💭CIN的「原始输出」总是信息量相对最多的（NAVM输出只取其中一个规则的子集）
+            //   * 📌因此，开启「详细模式」必定造成「信息冗余」
+            // TODO: 💡或许后续可用配置开关「详细模式/纯NAVM输出模式」，以实现「自定义输出形式」
+            //   * ✨这样的形式也方便调用其exe的其它外部程序解析exe输出（更为规范化）
             println_cli!(&output);
             // 继续返回
             Some(output)
