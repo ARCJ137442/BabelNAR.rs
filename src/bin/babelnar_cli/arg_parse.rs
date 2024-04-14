@@ -158,6 +158,7 @@ mod tests {
 
         /// 测试/成功的解析
         #[test]
+        #[ignore = "【2024-04-14 20:24:52】会导致残留子进程"]
         fn test_arg_parse() {
             test_arg_parse! {
                 ["-c", ARG_PARSE_TEST]

@@ -146,7 +146,8 @@ mod tests {
     /// 批量生成「预引入NAL」
     macro_rules! cin_tests {
         (
-            $cin_path:expr;
+            $(#[$attr_root:meta])*
+            $cin_path:ident; // ! ❌若为`expr`，则会和上边的修饰符导致「本地歧义」
             $(
                 $(#[$attr:meta])*
                 $name:ident => $config_path:expr $(;)?
@@ -155,6 +156,7 @@ mod tests {
             /// 主Shell
             /// * 🎯正常BabelNAR CLI shell启动
             /// * 🎯正常用户命令行交互体验
+            $(#[$attr_root])*
             #[test]
             pub fn main_shell() -> Result<()> {
                 main($cin_path, &[])
@@ -163,6 +165,7 @@ mod tests {
 
             /// Matriangle服务器
             /// * 🎯复现先前基于Matriangle环境的NARS实验
+            $(#[$attr_root])*
             #[test]
             pub fn main_matriangle_server() -> Result<()> {
                 // 以默认参数启动
@@ -219,6 +222,7 @@ mod tests {
         use super::*;
 
         cin_tests! {
+            #[ignore = "【2024-04-14 20:24:52】会导致残留子进程"]
             OPENNARS;
 
             /// 简单演绎

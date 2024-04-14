@@ -35,6 +35,7 @@ mod tests {
 
     /// 测试
     #[test]
+    #[ignore = "【2024-04-14 20:24:52】会导致残留子进程"]
     fn test() {
         // 启动OpenNARS虚拟机
         let vm = launch_vm();
@@ -44,6 +45,7 @@ mod tests {
 
     /// 测试/通用 | 基于Narsese
     #[test]
+    #[ignore = "【2024-04-14 20:24:52】会导致残留子进程"]
     fn test_universal() {
         // 启动OpenNARS虚拟机
         let vm = launch_vm();
