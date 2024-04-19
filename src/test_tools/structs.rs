@@ -35,6 +35,15 @@ pub enum NALInput {
     /// * 📄对应OpenNARS中常有的`''outputMustContain('')`
     ExpectContains(OutputExpectation),
 
+    /// 对「输出含有」的循环预期
+    /// * 📄语法示例：`''expect-cycle(500, 10, 0.1s): ANSWER <A --> C>.`
+    /// * 🎯用于「在『最大步数』的限定下循环尝试获取『期望的输出』，未获得预期输出⇒预期失败」
+    /// * 🚩循环指定周期（最大步数），并在其中检查预期；
+    ///   * 每步进1周期后，检查NAVM输出预期，有⇒终止，打印输出`expect-cycle(【次数】): 【输出】`
+    ///   * 若循环后仍无，视作「预期不符」
+    /// * 📄在「最大步数=0」的情形之下，`expect-cycle(0)`等价于[`expect-contains`](NALInput::ExpectContains)
+    ExpectCycle(usize, usize, Option<Duration>, OutputExpectation),
+
     /// 保存「输出缓存」到指定文件
     /// * 📄语法示例：`''save-outputs: outputs.log`
     /// * 🎯用于「将现有所有输出以『NAVM输出的JSON格式』存档至指定文件中」

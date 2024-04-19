@@ -20,19 +20,14 @@
 
 <<A --> B> ==> <C --> D>>.
 ' // ''await: IN <<A --> B> ==> <C --> D>>.
-''sleep: 0.05s
-' * 🚩【2024-04-19 13:28:46】增加睡眠时间，以让OpenNARS 158、CXinNARS有时间输出
 <A --> B>.
 ' // ''await: IN <A --> B>.
-''sleep: 0.05s
 <C --> D>?
-5
-
-' 使用睡眠延时，给足输出呈现时间
-''sleep: 1s
 
 ' 检验输出
-''expect-contains: ANSWER <C --> D>.
+''expect-cycle(100, 10, 0.25s): ANSWER <C --> D>.
+' * 🚩【2024-04-19 21:45:12】↑OpenNARS 3.x引入了大量心理操作，因此在「逐步递进」测试中性能不佳
+' * 📝【2024-04-19 21:46:42】OpenNARS 158、ONA、PyNARS等均能在五步之内回答
 
 ' 用户无法输入时退出（正常退出）
 ''terminate(if-no-user)

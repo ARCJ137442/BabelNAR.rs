@@ -29,7 +29,7 @@ cyc_uint = { ASCII_DIGIT+ }
 /// 注释（静默）
 /// * 🚩包括「输出预期」等「魔法注释」
 comment = _{
-    comment_head ~ (comment_navm_cmd | comment_sleep | comment_await | comment_expect_contains | comment_save_outputs | comment_terminate | comment_raw)
+    comment_head ~ (comment_navm_cmd | comment_sleep | comment_await | comment_expect_contains | comment_save_outputs | comment_expect_cycle | comment_terminate | comment_raw)
 }
 
 /// 注释的头部字符（静默）
@@ -75,6 +75,20 @@ comment_save_outputs = {
     // 额外的前缀
     "'save-outputs:" ~ output_expectation
 }
+
+/// 有关「循环等待预期」的「魔法注释」
+/// ✨阻塞主线程，循环指定周期，并在其中检查预期；
+/// * 每步进「步长」个周期后，检查NAVM输出预期，有⇒终止，打印输出`expect-cycle(【次数】): 【输出】`
+/// * 检查后，若存在时间，则等待指定时间
+/// * 若循环后仍无，上报「预期不符」
+comment_expect_cycle = {
+    // 额外的前缀
+    "'expect-cycle" ~ "(" ~ cyc_uint ~ "," ~ cyc_uint ~ ("," ~ comment_expect_cycle_step_time)? ~ "):" ~ output_expectation
+}
+
+/// 「循环等待预期」中的「每步后等待时间」
+/// * 🎯解决「输入CIN后，CIN输出需要时间，来不及反应」的问题
+comment_expect_cycle_step_time = { (!")" ~ !"," ~ ANY)* }
 
 /// 有关「终止」的「魔法注释」
 /// ✨终止NAVM虚拟机

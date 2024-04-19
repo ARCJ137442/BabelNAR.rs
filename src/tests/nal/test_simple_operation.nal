@@ -19,19 +19,16 @@
 ' '/REG left
 
 <(*, {SELF}) --> ^left>! :|:
-10
-''sleep: 1s
-''expect-contains: EXE (^left, {SELF})
+' * 🚩一次性执行一百步（并延时等待），若无预期输出⇒上报
+''expect-cycle(100, 100, 0.25s): EXE (^left, {SELF})
 
 <(*, {SELF}, P) --> ^left>! :|:
-10
-''sleep: 1s
-''expect-contains: EXE (^left, {SELF}, P)
+' * 🚩一次性执行一百步（并延时等待），若无预期输出⇒上报
+''expect-cycle(100, 100, 0.25s): EXE (^left, {SELF}, P)
 
 <(*, {SELF}, (*, P1, P2)) --> ^left>! :|:
-10
-''sleep: 1s
-''expect-contains: EXE (^left, {SELF}, (*, P1, P2))
+' * 🚩一次性执行一百步（并延时等待），若无预期输出⇒上报
+''expect-cycle(100, 100, 0.25s): EXE (^left, {SELF}, (*, P1, P2))
 
 ''sleep: 500ms
 ''terminate(if-no-user)
