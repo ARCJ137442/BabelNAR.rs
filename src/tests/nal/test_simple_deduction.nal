@@ -20,8 +20,11 @@
 
 <A --> B>.
 ' // ''await: IN <A --> B>.
+''sleep: 0.05s
+' * 🚩【2024-04-19 13:28:46】增加睡眠时间，以让OpenNARS 158、CXinNARS有时间输出
 <B --> C>.
 ' // ''await: IN <B --> C>.
+''sleep: 0.05s
 <A --> C>?
 5
 

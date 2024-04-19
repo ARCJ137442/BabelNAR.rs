@@ -68,6 +68,8 @@ pub mod tests {
 
             /// OpenNARS
             OPENNARS = "./src/tests/cli/config/cin_opennars.hjson"
+            /// OpenNARS
+            OPENNARS_158 = "./src/tests/cli/config/cin_opennars_158.hjson"
             /// ONA
             ONA = "./src/tests/cli/config/cin_ona.hjson"
             /// PyNARS
