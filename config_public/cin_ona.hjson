@@ -1,0 +1,20 @@
+#hjson
+// ONA
+// * 🎯配置启动ONA
+// * 🔗官网：https://github.com/opennars/OpenNARS-for-Applications
+// * ⚠️启动需要cygwin
+//   * 🔗中文官网: http://www.cygwin.cn/
+{
+    description: ONA (OpenNARS for Applications)（独立exe，需要cygwin）
+    translators: ona
+    command: {
+        // * ⚠️必须前缀`./`以指定是「启动当前工作目录下的exe文件」
+        cmd: ./ONA.exe
+        cmdArgs: [
+            shell
+        ]
+        // 启动目录
+        currentDir: ./../executables
+    }
+    autoRestart: true
+}

@@ -1,0 +1,26 @@
+#hjson
+// OpenNARS
+// * 🎯配置启动OpenNARS
+// * 🔗官网：https://github.com/patham9/opennars_declarative_core
+// * ⚠️需要Java启动
+//   * 🔗中文官网：https://www.java.com/zh_CN/
+{
+    description: "OpenNARS 1.5.8（jar文件，需要Java运行时JRE）"
+    // 转译器
+    translators: "opennars"
+    // 启动命令
+    command: {
+        // 命令：启动java运行时
+        cmd: "java"
+        // 传入的命令参数
+        cmdArgs: [
+            // 启动jar包
+            -jar
+            ./opennars-158-shell.jar
+        ]
+        // 启动目录
+        currentDir: ./../executables
+    }
+    // 自动重启
+    autoRestart: true
+}

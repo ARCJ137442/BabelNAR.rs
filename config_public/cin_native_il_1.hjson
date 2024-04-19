@@ -1,0 +1,15 @@
+#hjson
+// * 🎯用于测试原生「IL-1」运行时
+// * ✨基于NAVM，纯Rust编写
+{
+    description: Native IL-1（基于NAVM的独立exe，使用纯Rust编写）
+    translators: native
+    command: {
+        // * ⚠️必须前缀`./`以指定是「启动当前工作目录下的exe文件」
+        cmd: ./native-IL-1.exe
+        cmdArgs: []
+        // 启动目录
+        currentDir: ./../executables
+    }
+    autoRestart: true
+}
