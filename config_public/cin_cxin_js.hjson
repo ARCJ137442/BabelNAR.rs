@@ -1,0 +1,24 @@
+#hjson
+// CXin JS
+// * 🎯配置启动CXinNARS
+// * @Author 孙常新
+// * ⚠️需要Node.js启动
+//   * 🔗中文官网：https://nodejs.org/zh-cn
+{
+    description: "CXinNARS（基于Node.js运行时，从源码启动）"
+    // 输入输出转译器
+    translators: "cxin_js"
+    // 启动命令
+    command: {
+        // * ⚠️必须前缀`./`以指定是「启动当前工作目录下的exe文件」
+        cmd: node
+        cmdArgs: [
+            cxin-nars-shell.js
+            shell
+        ]
+        // 启动目录
+        currentDir: ./../executables
+    }
+    // 自动重启
+    autoRestart: true
+}

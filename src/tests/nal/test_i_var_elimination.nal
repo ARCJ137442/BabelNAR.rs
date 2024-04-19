@@ -16,13 +16,9 @@
 <A --> B>.
 <<A --> $1> ==> <$1 --> C>>.
 <B --> C>?
-100
 
-' 使用睡眠延时，给足输出呈现时间
-''sleep: 1s
-
-' 检验输出
-''expect-contains: ANSWER <B --> C>.
+' 检验输出 | ⚠️0.25s需要兼容PyNARS
+''expect-cycle(200, 20, 0.25s): ANSWER <B --> C>.
 
 ' 用户无法输入时退出（正常退出）
 ''terminate(if-no-user)

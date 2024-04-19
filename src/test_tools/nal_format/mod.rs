@@ -104,16 +104,7 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
             // 取其中第一个`comment_raw`元素 | 一定只有唯一一个`comment_raw`
             let duration_raw = pair.into_inner().next().unwrap().as_str().trim();
             // 尝试解析时间
-            let duration = first! {
-                // 毫秒→微秒→纳秒→秒 | 对于「秒」分「整数」「浮点」两种
-                duration_raw.ends_with("ms") => Duration::from_millis(duration_raw.strip_suffix("ms").unwrap().parse()?),
-                duration_raw.ends_with("μs") => Duration::from_micros(duration_raw.strip_suffix("μs").unwrap().parse()?),
-                duration_raw.ends_with("ns") => Duration::from_nanos(duration_raw.strip_suffix("ns").unwrap().parse()?),
-                duration_raw.ends_with('s') && duration_raw.contains('.') => Duration::try_from_secs_f64(duration_raw.strip_suffix('s').unwrap().parse()?)?,
-                duration_raw.ends_with('s') => Duration::from_secs(duration_raw.strip_suffix('s').unwrap().parse()?),
-                // 否则报错
-                _ => return Err(anyhow::anyhow!("未知的睡眠时间参数 {duration_raw:?}"))
-            };
+            let duration = parse_duration(duration_raw)?;
             // * 封装
             let input = NALInput::Sleep(duration);
             Ok(input)
@@ -137,6 +128,48 @@ fn fold_pest(pair: Pair<Rule>) -> Result<NALInput> {
             // 取其中唯一一个「输出预期」
             let file_path = pair.into_inner().next().unwrap().as_str().into();
             Ok(NALInput::SaveOutputs(file_path))
+        }
+        // 魔法注释/循环预期
+        Rule::comment_expect_cycle => {
+            let mut pairs = pair.into_inner();
+            // 取其中的「最大步数」
+            let max_cycles = pipe! {
+                pairs.next().unwrap()
+                => .as_str()
+                => {.parse::<usize>()}#
+                => {?}#
+            };
+            // 取其中的「每次步长」
+            let step_cycles = pipe! {
+                pairs.next().unwrap()
+                => .as_str()
+                => {.parse::<usize>()}#
+                => {?}#
+            };
+            // 取其中的「输出预期」
+            let step_duration = pairs.next();
+            let step_duration = match step_duration {
+                Some(step_duration) => {
+                    // 尝试解析时间
+                    let step_duration = parse_duration(step_duration.as_str())?;
+                    // 封装
+                    Some(step_duration)
+                }
+                None => None,
+            };
+            // 取其中的「输出预期」
+            let output_expectation = pipe! {
+                pairs.next().unwrap()
+                => fold_pest_output_expectation
+                => {?}#
+            };
+            // 构造 & 返回
+            Ok(NALInput::ExpectCycle(
+                max_cycles,
+                step_cycles,
+                step_duration,
+                output_expectation,
+            ))
         }
         // 魔法注释/终止
         Rule::comment_terminate => {
@@ -247,6 +280,19 @@ fn fold_pest_output_operation(pair: Pair<Rule>) -> Result<Operation> {
     Ok(Operation {
         operator_name,
         params,
+    })
+}
+
+fn parse_duration(duration_raw: &str) -> Result<Duration> {
+    Ok(first! {
+        // 毫秒→微秒→纳秒→秒 | 对于「秒」分「整数」「浮点」两种
+        duration_raw.ends_with("ms") => Duration::from_millis(duration_raw.strip_suffix("ms").unwrap().parse()?),
+        duration_raw.ends_with("μs") => Duration::from_micros(duration_raw.strip_suffix("μs").unwrap().parse()?),
+        duration_raw.ends_with("ns") => Duration::from_nanos(duration_raw.strip_suffix("ns").unwrap().parse()?),
+        duration_raw.ends_with('s') && duration_raw.contains('.') => Duration::try_from_secs_f64(duration_raw.strip_suffix('s').unwrap().parse()?)?,
+        duration_raw.ends_with('s') => Duration::from_secs(duration_raw.strip_suffix('s').unwrap().parse()?),
+        // 否则报错
+        _ => return Err(anyhow::anyhow!("未知的睡眠时间参数 {duration_raw:?}"))
     })
 }
 

@@ -2,12 +2,12 @@
 
 use std::{ops::ControlFlow, path::Path};
 
-use crate::cli_support::error_handling_boost::error_anyhow;
+use crate::cli_support::{error_handling_boost::error_anyhow, io::output_print::OutputType};
 
 use super::{NALInput, OutputExpectation, OutputExpectationError};
 use anyhow::Result;
 use nar_dev_utils::{if_return, ResultBoost};
-use navm::{output::Output, vm::VmRuntime};
+use navm::{cmd::Cmd, output::Output, vm::VmRuntime};
 
 /// * 🎯统一存放与「Narsese预期识别」有关的代码
 /// * 🚩【2024-04-02 22:49:12】从[`crate::runtimes::command_vm::runtime::tests`]中迁移而来
@@ -265,6 +265,35 @@ pub fn put_nal(
             //     if expectation.matches(output) {
             //     }
             // }
+        }
+        // 检查在指定的「最大步数」内，是否有NAVM输出符合预期（弹性步数`0~最大步数`）
+        NALInput::ExpectCycle(max_cycles, step_cycles, step_duration, expectation) => {
+            let mut cycles = 0;
+            while cycles < max_cycles {
+                // 推理步进
+                vm.input_cmd(Cmd::CYC(step_cycles))?;
+                cycles += step_cycles;
+                // 等待指定时长
+                if let Some(duration) = step_duration {
+                    std::thread::sleep(duration);
+                }
+                // 先尝试拉取所有输出到「输出缓存」
+                while let Some(output) = vm.try_fetch_output()? {
+                    output_cache.put(output)?;
+                }
+                // 然后读取并匹配缓存
+                let result = output_cache.for_each(|output| match expectation.matches(output) {
+                    true => ControlFlow::Break(true),
+                    false => ControlFlow::Continue(()),
+                })?;
+                // 匹配到一个⇒提前返回Ok
+                if let Some(true) = result {
+                    OutputType::Info.print_line(&format!("expect-cycle({cycles}): {expectation}"));
+                    return Ok(());
+                }
+            }
+            // 步进完所有步数，仍未有匹配⇒返回Err
+            Err(OutputExpectationError::ExpectedNotExists(expectation).into())
         }
         // 保存（所有）输出
         // * 🚩输出到一个文本文件中

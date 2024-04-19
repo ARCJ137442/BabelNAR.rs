@@ -359,6 +359,7 @@ pub mod tests {
     /// 示例测试 | OpenNARS
     /// * 🚩通过Java命令启动
     #[test]
+    #[ignore = "【2024-04-14 20:24:52】会导致残留子进程"]
     fn test_opennars() {
         // 构造指令
         let mut command_java = Command::new(COMMAND_JAVA);

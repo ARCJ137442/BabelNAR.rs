@@ -99,6 +99,7 @@ fn main() {
 }
 
 #[test]
+#[ignore = "【2024-04-14 20:38:45】仅作为其它Websocket服务端的压力测试，不应在库测试中出现"]
 fn test_overwhelming_nse() {
     loop {
         let _ = ws::connect("ws://127.0.0.1:8765", |sender| {
@@ -123,6 +124,7 @@ fn test_overwhelming_nse() {
 /// 压力测试
 /// * 🔗GitHub issue：<https://github.com/housleyjk/ws-rs/issues/346>
 #[test]
+#[ignore = "【2024-04-14 20:38:45】仅作为其它Websocket服务端的压力测试，不应在库测试中出现"]
 fn main_server() {
     // A client that sends tons of messages to the server
     thread::spawn(move || {

@@ -1,0 +1,21 @@
+// PyNARS
+// * 🎯配置启动PyNARS
+// * 🔗官网：https://github.com/bowen-xu/PyNARS
+// * ⚠️需要Python（从源码）启动
+//   * 🔗官网：http://python.org/
+//   * ℹ️推荐版本：3.10+
+{
+    description: PyNARS（基于Python运行时，从源码启动）
+    translators: pynars
+    command: {
+        cmd: python
+        cmdArgs: [
+            "-m"
+            // * 🚩【2024-04-07 14:41:20】使用扩展了「附加指令」的「高级控制台」
+            pynars.ConsolePlus
+        ]
+        // 启动目录
+        currentDir: ./../executables/PyNARS
+    }
+    autoRestart: true
+}

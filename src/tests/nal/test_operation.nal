@@ -30,9 +30,9 @@ G. :|:
 <(&/, A, <(*, {SELF}) --> ^left>) ==> G>?
 A. :|:
 G! :|:
-10
-''sleep: 1s
-''expect-contains: EXE (^left, {SELF})
+''expect-cycle(2000, 200, 0.2s): EXE (^left, {SELF})
+' * 🚩【2024-04-19 21:45:12】↑OpenNARS 3.x引入了大量心理操作，因此在「逐步递进」测试中性能不佳
+' * 📝【2024-04-19 21:46:42】OpenNARS 158、ONA、PyNARS等均能在5步之内回答
 
 A2. :|:
 <(*, {SELF}, P) --> ^left>. :|:
@@ -42,9 +42,9 @@ G2. :|:
 <(&/, A2, <(*, {SELF}, P) --> ^left>) ==> G2>?
 A2. :|:
 G2! :|:
-10
-''sleep: 1s
-''expect-contains: EXE (^left, {SELF}, P)
+''expect-cycle(2000, 200, 0.2s): EXE (^left, {SELF}, P)
+' * 🚩【2024-04-19 21:45:12】↑OpenNARS 3.x引入了大量心理操作，因此在「逐步递进」测试中性能不佳
+' * 📝【2024-04-19 21:46:42】OpenNARS 158、ONA、PyNARS等均能在5步之内回答
 
 A3. :|:
 <(*, {SELF}, (*, P1, P2)) --> ^left>. :|:
@@ -54,9 +54,9 @@ G3. :|:
 <(&/, A3, <(*, {SELF}, (*, P1, P2)) --> ^left>) ==> G3>?
 A3. :|:
 G3! :|:
-10
-''sleep: 1s
-''expect-contains: EXE (^left, {SELF}, (*, P1, P2))
+''expect-cycle(2000, 200, 0.2s): EXE (^left, {SELF}, (*, P1, P2))
+' * 🚩【2024-04-19 21:45:12】↑OpenNARS 3.x引入了大量心理操作，因此在「逐步递进」测试中性能不佳
+' * 📝【2024-04-19 21:46:42】OpenNARS 158、ONA、PyNARS等均能在5步之内回答
 
 ''sleep: 500ms
 
