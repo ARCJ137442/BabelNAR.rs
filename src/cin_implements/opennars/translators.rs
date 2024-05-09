@@ -41,6 +41,8 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         Cmd::VOL(n) => format!("*volume={n}"),
         // 注释 ⇒ 忽略 | ❓【2024-04-02 22:43:05】可能需要打印，但这样却没法统一IO（到处print的习惯不好）
         Cmd::REM { .. } => String::new(),
+        // 退出码
+        Cmd::EXI { .. } => "*exit".into(),
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
         // ! 🚩【2024-03-27 22:42:56】不使用[`anyhow!`]：打印时会带上一大堆调用堆栈
@@ -95,6 +97,10 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
             content: content_raw,
         },
         "ERR" | "ERROR" => Output::ERROR {
+            description: content_raw,
+        },
+        // * 🚩【2024-05-09 14:41:11】目前为OpenNARS 1.5.8（定制版）专用
+        "TERMINATED" | "EXITED" | "QUITTED" => Output::TERMINATED {
             description: content_raw,
         },
         // * 🚩利用OpenNARS常见输出「全大写」的特征，兼容「confirm」与「disappoint」

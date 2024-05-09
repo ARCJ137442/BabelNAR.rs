@@ -1,13 +1,11 @@
 //! 与NAVM虚拟机的交互逻辑
 
-use std::{ops::ControlFlow, path::Path};
-
-use crate::cli_support::{error_handling_boost::error_anyhow, io::output_print::OutputType};
-
 use super::{NALInput, OutputExpectation, OutputExpectationError};
+use crate::cli_support::{error_handling_boost::error_anyhow, io::output_print::OutputType};
 use anyhow::Result;
 use nar_dev_utils::{if_return, ResultBoost};
 use navm::{cmd::Cmd, output::Output, vm::VmRuntime};
+use std::{ops::ControlFlow, path::Path};
 
 /// * 🎯统一存放与「Narsese预期识别」有关的代码
 /// * 🚩【2024-04-02 22:49:12】从[`crate::runtimes::command_vm::runtime::tests`]中迁移而来

@@ -83,6 +83,13 @@ impl VmRuntime for CommandVmRuntime {
     }
 
     fn terminate(&mut self) -> Result<()> {
+        // 给CIN发送「终止」指令：告知CIN内部「需要结束程序」
+        // * 📌【2024-05-09 14:20:00】目前似乎通过这一手段，仍然无法彻底关闭Java程序
+        // * 🔬【2024-05-09 14:20:22】目前在程序关闭时，即便杀掉了子进程，也会因此被阻塞（需要kill`java.exe`才能解锁）
+        self.input_cmd(Cmd::EXI {
+            reason: "CIN terminated by BabelNAR".into(),
+        })?;
+
         // 杀死子进程
         self.process.kill()?;
 
@@ -162,7 +169,6 @@ pub mod tests {
         criterion: impl Fn(&Output, &str) -> bool,
     ) -> Output {
         // 不断拉取输出
-        // TODO: 💭【2024-03-24 18:21:28】后续可以结合「流式处理者列表」做集成测试
         loop {
             // 拉取输出及其内容 | ⚠️必要时等待（阻塞！）
             let output = vm.fetch_output().unwrap();
