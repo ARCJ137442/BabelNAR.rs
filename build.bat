@@ -27,5 +27,5 @@ copy .\executables\opennars-158-shell.jar .\dist\executables\opennars-158-shell.
 copy .\executables\opennars-304-T-modified.jar .\dist\executables\opennars-304-T-modified.jar
 copy .\executables\opennars-matriangle-test.log.json .\dist\executables\opennars-matriangle-test.log.json
 
-echo "Build Successfull!"
+echo Build Successfull!
 sleep 1
