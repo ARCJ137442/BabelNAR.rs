@@ -7,9 +7,11 @@ use nar_dev_utils::{if_return, ResultBoost};
 use navm::{cmd::Cmd, output::Output, vm::VmRuntime};
 use std::{ops::ControlFlow, path::Path};
 
+// Narsese预期
 mod narsese_expectation;
 pub use narsese_expectation::*;
 
+// 词项判等
 mod term_equal;
 
 /// 实现/预期匹配功能
