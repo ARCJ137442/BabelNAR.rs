@@ -178,6 +178,7 @@ mod tests {
             $(
                 $(#[$attr])*
                 #[test]
+                #[ignore = "【2024-06-12 23:52:35】不用于自动化测试：会自动清屏影响测试结果呈现"]
                 pub fn $name() -> Result<()> {
                     main_configs($cin_path, &[PRELUDE_TEST, $config_path])
                 }
@@ -402,6 +403,7 @@ mod tests {
     /// * 🎯用户命令行交互体验（并存）
     /// * 🎯Websocket通信
     #[test]
+    #[ignore = "仅作试运行用，不用于自动化测试"]
     pub fn main_websocket() -> Result<()> {
         // 以默认参数启动
         main_args(
