@@ -116,6 +116,9 @@ pub fn launch_by_config(
     Ok((runtime, config))
 }
 
+/// 根据「运行时启动参数」启动虚拟机
+/// * 🚩生成、配置、启动虚拟机
+/// * 🎯在「初次启动」与「二次重启」中共用代码
 pub fn launch_by_runtime_config(config: &RuntimeConfig) -> Result<impl VmRuntime> {
     // 生成虚拟机
     let config_command = &config.command;
@@ -196,6 +199,7 @@ pub type TranslatorDict<'a> = &'a [(
     fn(Cmd) -> Result<String>,
     fn(String) -> Result<Output>,
 )];
+
 /// 输入转译器的索引字典
 /// * 🚩静态存储映射，后续遍历可有序可无序
 pub const TRANSLATOR_DICT: TranslatorDict = &[
@@ -229,6 +233,7 @@ pub const TRANSLATOR_DICT: TranslatorDict = &[
     ),
 ];
 
+/// 根据名字查找「输入转译器」
 pub fn get_input_translator_by_name(cin_name: &str) -> Result<Box<InputTranslator>> {
     // 根据「匹配度」的最大值选取
     let translator = TRANSLATOR_DICT
@@ -239,6 +244,7 @@ pub fn get_input_translator_by_name(cin_name: &str) -> Result<Box<InputTranslato
     Ok(Box::new(translator))
 }
 
+/// 根据名字查找「输出转译器」
 pub fn get_output_translator_by_name(cin_name: &str) -> Result<Box<OutputTranslator>> {
     // 根据「匹配度」的最大值选取
     let translator = TRANSLATOR_DICT
@@ -255,16 +261,11 @@ mod tests {
     use super::*;
     use nar_dev_utils::{asserts, f_parallel};
 
-    #[test]
-    fn t() {
-        dbg!(format!("{:p}", opennars::input_translate as fn(_) -> _));
-    }
-
-    /// 测试
+    /// 测试「根据名字查找转译器」
     /// * 🚩仅能测试「是否查找成功」，无法具体地比较函数是否相同
     ///   * 📝函数在被装进[`Box`]后，对原先结构的完整引用就丧失了
     #[test]
-    fn test() {
+    fn get_translator_by_name() {
         fn t(name: &str) {
             asserts! {
                 get_input_translator_by_name(name).is_ok()

@@ -774,10 +774,15 @@ pub mod tests {
     /// * 🎯被重定向到`./executables`，以便启动其下的`.jar`文件
     #[test]
     fn test_read() {
-        // 使用OpenNARS配置文件的路径作测试
+        // * 🚩使用OpenNARS配置文件的路径作测试
         let path: PathBuf = config_paths::OPENNARS.into();
         let launch_config = read_config_extern(&path).expect("路径读取失败");
-        let expected_path = "./executables".into();
+        // * 🚩构造预期路径
+        let root_path = PathBuf::from(".");
+        let mut expected_path: PathBuf = "./executables".into();
+        LaunchConfig::rebase_relative_path(&root_path, &mut expected_path)
+            .expect("【2024-06-12 23:53:59】现在应该是绝对路径");
+        // * 🚩测试&比对
         asserts! {
             // * 🎯启动命令中的「当前目录」应该被追加到配置自身的路径上
             // * ✅即便拼接后路径是`"./src/tests/cli/config\\root/nars/test"`，也和上边的路径相等
