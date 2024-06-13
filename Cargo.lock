@@ -74,7 +74,7 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
 name = "babel_nar"
-version = "0.24.3"
+version = "0.24.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -702,15 +702,15 @@ dependencies = [
 
 [[package]]
 name = "nar_dev_utils"
-version = "0.31.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de2fad06f5a0f39772634d0f72d7d114bc31f33b089012692330e914e5f02bea"
+checksum = "1bc436754166820e0cdf0dfd147ec5f8faefc6459e65e8b91c4bf5da684e8f85"
 
 [[package]]
 name = "narsese"
-version = "0.19.1"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8530d24772e0382c84683812e7a7c1c58a417dfec31cacc16358635316a76e1"
+checksum = "0896f2994e2eedc0f53113a235ce4a498cdc2b8e3a79e4c7ce5f594c243b9858"
 dependencies = [
  "lazy_static",
  "nar_dev_utils",
@@ -718,9 +718,9 @@ dependencies = [
 
 [[package]]
 name = "navm"
-version = "0.15.2"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32e59cfcc3b868e199646293d7bcdf42e576641d298d5481438f65e3d83ae491"
+checksum = "3b47eddfbb9de49498e6e50bac6240ec406034b8f121de1fc31a15aa09cc68d5"
 dependencies = [
  "anyhow",
  "nar_dev_utils",

@@ -5,13 +5,14 @@
 use crate::runtimes::TranslateError;
 use anyhow::{Ok, Result};
 use narsese::{
-    conversion::string::{
-        impl_enum::format_instances::FORMAT_ASCII, impl_lexical::structs::MidParseResult,
-    },
-    lexical::{Budget, Narsese, Term, Truth},
+    api::NarseseOptions,
+    conversion::string::impl_enum::format_instances::FORMAT_ASCII,
+    lexical::{Budget, Narsese, Punctuation, Stamp, Term, Truth},
 };
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
+
+pub(super) type MidParseResult = NarseseOptions<Budget, Term, Punctuation, Stamp, Truth>;
 
 #[derive(Parser)] // ! ↓ 必须从项目根目录开始
 #[grammar = "src/cin_implements/opennars/dialect_opennars.pest"]

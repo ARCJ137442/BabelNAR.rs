@@ -18,7 +18,7 @@
 use crate::runtimes::TranslateError;
 use anyhow::Result;
 use narsese::{
-    conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, structs::ParseResult},
+    conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, ParseResult},
     lexical::Narsese,
 };
 use navm::{
