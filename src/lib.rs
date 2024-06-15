@@ -93,6 +93,8 @@ pub mod tests {
             NAL_OPERATION = "./src/tests/cli/config/nal_operation.hjson"
             /// NAL/简单操作
             NAL_SIMPLE_OPERATION = "./src/tests/cli/config/nal_simple_operation.hjson"
+            /// NAL/真值通配
+            NAL_TRUTH_WILDCARD = "./src/tests/cli/config/nal_truth_wildcard.hjson"
 
             /// Websocket
             WEBSOCKET = "./src/tests/cli/config/websocket.hjson"

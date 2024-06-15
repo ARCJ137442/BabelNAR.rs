@@ -193,6 +193,10 @@ mod tests {
         cin_tests! {
             ONA;
 
+            /// 真值通配
+            /// * 📝✅【2024-06-15 20:31:10】成功
+            nal_tw => NAL_TRUTH_WILDCARD
+
             /// 简单演绎
             /// * 📝✅【2024-04-19 22:49:51】成功
             nal_de => NAL_SIMPLE_DEDUCTION
@@ -229,6 +233,10 @@ mod tests {
             #[ignore = "【2024-04-14 20:24:52】会导致残留子进程"]
             OPENNARS;
 
+            /// 真值通配
+            /// * 📝✅【2024-06-15 20:31:10】成功
+            nal_tw => NAL_TRUTH_WILDCARD
+
             /// 简单演绎
             /// * 📝✅【2024-04-19 22:49:02】成功（步数性能上不佳）
             nal_de => NAL_SIMPLE_DEDUCTION
@@ -263,6 +271,10 @@ mod tests {
             #[ignore = "【2024-04-14 20:24:52】会导致残留子进程"]
             OPENNARS_158;
 
+            /// 真值通配
+            /// * 📝✅【2024-06-15 20:31:10】成功
+            nal_tw => NAL_TRUTH_WILDCARD
+
             /// 简单演绎
             /// * 📝✅【2024-04-19 23:02:59】成功
             nal_de => NAL_SIMPLE_DEDUCTION
@@ -295,6 +307,10 @@ mod tests {
 
         cin_tests! {
             PYNARS;
+
+            /// 真值通配
+            /// * 📝❌【2024-06-15 20:39:59】失败：原因不明
+            nal_tw => NAL_TRUTH_WILDCARD
 
             /// 简单演绎
             /// * 📝✅【2024-04-19 23:04:24】成功
@@ -334,6 +350,10 @@ mod tests {
         cin_tests! {
             CXIN_JS;
 
+            /// 真值通配
+            /// * 📝❌【2024-06-15 20:41:37】失败：没有ANSWER
+            nal_tw => NAL_TRUTH_WILDCARD
+
             /// 简单演绎
             /// * 📝❌【2024-04-07 14:37:49】失败：导出了结论，但没法回答
             /// * 📄只能导出`<B-->C>. %1;0.9%`
@@ -369,6 +389,10 @@ mod tests {
 
         cin_tests! {
             NATIVE_IL_1;
+
+            /// 真值通配
+            /// * 📝❌【2024-06-15 20:42:18】失败：尚不支持
+            nal_tw => NAL_TRUTH_WILDCARD
 
             /// 简单演绎
             /// * 📝✅【2024-04-09 21:12:10】成功

@@ -46,7 +46,7 @@ fn _is_expected_narsese(mut expected: Narsese, mut out: Narsese) -> bool {
     let fold = PartialFoldResult::try_from;
     match (fold(expected), fold(out)) {
         // * 🚩若均解析成功⇒进一步判等
-        (Ok(expected), Ok(out)) => out.is_expected_out(&expected),
+        (Ok(expected), Ok(out)) => expected.is_expected_out(&out),
         // * 🚩任一解析失败⇒直接失败
         _ => false,
     }
@@ -227,3 +227,5 @@ pub fn is_expected_operation(expected: &Operation, out: &Operation) -> bool {
         (false, false) => expected.params == out.params,
     }
 }
+
+// TODO: 单元测试
