@@ -80,6 +80,21 @@ impl PartialFoldResult {
                         both_and!(@SINGLE $($code)*)
                     )&&*
                 };
+                // 🚩空值通配
+                // * 🎯用于在「真值为空」「预算值为空」时通配
+                // * 📌【2024-06-16 16:58:53】「任务」应该与「空预算的语句」通配
+                (@SINGLE @EMPTY_WILDCARD $exp_i:ident @ $exp:expr, $out_i:ident @ $out:expr => $($code:tt)*) => {
+                    match ($exp.as_ref(), $out.as_ref()) {
+                        // * 🚩预期、输出 都有
+                        (Some($exp_i), Some($out_i)) => {
+                            $($code)*
+                            },
+                        // * 🚩没预期 ⇒ 通配
+                        (None, _) => true,
+                        // * 🚩其它⇒否
+                        _ => false,
+                    }
+                };
                 (@SINGLE $l_i:ident @ $l:expr, $r_i:ident @ $r:expr => $($code:tt)*) => {
                     match ($l.as_ref(), $r.as_ref()) {
                         (Some($l_i), Some($r_i)) => {
@@ -102,11 +117,13 @@ impl PartialFoldResult {
                 out @ out.stamp =>
                 expected == out // * 🚩简单枚举类型：直接判等
             } && {
+                @EMPTY_WILDCARD // ! 空值通配
                 // 真值一致
                 expected @ self.truth,
                 out @ out.truth =>
                 is_expected_truth(expected, out) // * 🚩特殊情况（需兼容）特殊处理
             } && {
+                @EMPTY_WILDCARD // ! 空值通配
                 // 预算值一致
                 expected @ self.budget,
                 out @ out.budget =>
@@ -228,4 +245,117 @@ pub fn is_expected_operation(expected: &Operation, out: &Operation) -> bool {
     }
 }
 
-// TODO: 单元测试
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use narsese::lexical_nse as nse;
+    use navm::operation;
+
+    #[test]
+    fn is_expected_narsese_lexical() {
+        // * 🚩正例
+        macro_once! {
+            macro test($($expected:expr => $out:expr $(,)?)*) {
+                $(
+                    let expected = nse!($expected);
+                    let out = nse!($out);
+                    assert!(
+                        super::is_expected_narsese_lexical(&expected, &out),
+                        "正例断言失败！\nexpected: {expected:?}, out: {out:?}"
+                    );
+                )*
+            }
+            // 常规词项、语句、任务
+            "A"  => "A",
+            "A." => "A.",
+            "A?" => "A?",
+            "A! %1.0;0.9%" => "A! %1.0;0.9%"
+            "$0.5;0.5;0.5$ A@" => "$0.5;0.5;0.5$ A@",
+            "$0.5;0.5;0.5$ A. %1.0;0.9%" => "$0.5;0.5;0.5$ A. %1.0;0.9%",
+            // 真值通配
+            "A." => "A. %1.0;0.9%",
+            "A!" => "A! %1.0;0.9%",
+            // 预算值通配
+            "A." => "$0.5;0.5;0.5$ A.",
+            "A!" => "$0.5;0.5;0.5$ A!",
+            "A." => "$0.5;0.5;0.5$ A. %1.0;0.9%",
+            "A!" => "$0.5;0.5;0.5$ A! %1.0;0.9%",
+            // 源自实际应用
+               "<(&&,<$1 --> lock>,<$2 --> key>) ==> <$1 --> (/,open,$2,_)>>. %1.00;0.45%"
+            => "<(&&,<$1 --> key>,<$2 --> lock>) ==> <$2 --> (/,open,$1,_)>>. %1.00;0.45%"
+        }
+        // * 🚩反例
+        macro_once! {
+            macro test($($expected:literal != $out:literal $(,)?)*) {
+                $(
+                    let expected = nse!($expected);
+                    let out = nse!($out);
+                    assert!(
+                        !super::is_expected_narsese_lexical(&expected, &out),
+                        "反例断言失败！\nexpected: {expected:?}, out: {out:?}"
+                    );
+                )*
+            }
+            "A"  != "B",
+            "A." != "A?",
+            "A?" != "<A --> B>?",
+            // 真值通配（反向就不行）
+            "A. %1.0;0.9%" != "A.",
+            "A! %1.0;0.9%" != "A!",
+            // 预算值通配（反向就不行）
+            "$0.5;0.5;0.5$ A."           != "A.",
+            "$0.5;0.5;0.5$ A!"           != "A!",
+            "$0.5;0.5;0.5$ A. %1.0;0.9%" != "A.",
+            "$0.5;0.5;0.5$ A! %1.0;0.9%" != "A!",
+        }
+    }
+
+    #[test]
+    fn is_expected_operation() {
+        // * 🚩正例
+        macro_once! {
+            macro test($(
+                [$($t_expected:tt)*] => [$($t_out:tt)*]
+            )*) {
+                $(
+                    let expected = operation!($($t_expected)*);
+                    let out = operation!($($t_out)*);
+                    assert!(
+                        super::is_expected_operation(&expected, &out),
+                        "正例断言失败！\nexpected: {expected:?}, out: {out:?}"
+                    );
+                )*
+            }
+            // * 🚩仅有操作名
+            ["left"] => ["left"]
+            // * 🚩带参数
+            ["left" => "{SELF}"] => ["left" => "{SELF}"]
+            ["left" => "{SELF}" "x"] => ["left" => "{SELF}" "x"]
+        }
+        // * 🚩反例
+        macro_once! {
+            macro test($(
+                [$($t_expected:tt)*] != [$($t_out:tt)*]
+            )*) {
+                $(
+                    let expected = operation!($($t_expected)*);
+                    let out = operation!($($t_out)*);
+                    assert!(
+                        !super::is_expected_operation(&expected, &out),
+                        "反例断言失败！\nexpected: {expected:?}, out: {out:?}"
+                    );
+                )*
+            }
+            // * 🚩操作名不同
+            ["left"] != ["right"]
+            ["left" => "{SELF}"] != ["right" => "{SELF}"]
+            ["left" => "{SELF}" "x"] != ["right" => "{SELF}" "x"]
+            // * 🚩参数数目不同
+            ["left" => "{SELF}"] != ["left" => "{SELF}" "x"]
+            // * 🚩参数不同
+            ["left" => "{SELF}" "x"] != ["left" => "[good]" "x"]
+            ["left" => "{SELF}" "x"] != ["left" => "{OTHER}" "x"]
+            ["left" => "{SELF}" "x"] != ["left" => "{SELF}" "y"]
+        }
+    }
+}

@@ -74,7 +74,7 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
 name = "babel_nar"
-version = "0.24.6"
+version = "0.24.7"
 dependencies = [
  "anyhow",
  "clap",
@@ -718,9 +718,9 @@ dependencies = [
 
 [[package]]
 name = "navm"
-version = "0.15.5"
+version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1169c102c55f2714b6247e511ef223458b59902ad64a193f26d249c96580bb67"
+checksum = "52d930f9e6512801405f9bc7e12fc5ca6b52354b19888a7b634327907085651e"
 dependencies = [
  "anyhow",
  "nar_dev_utils",
