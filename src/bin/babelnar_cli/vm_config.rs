@@ -86,10 +86,39 @@ pub const SUPPORTED_CONFIG_EXTENSIONS: &[&str] = &["hjson", "json"];
 macro_rules! coalesce_clones {
     {
         // 合并的方向
-        $other:ident => $this:ident;
+        $self_type:ty: $other:ident => $this:ident;
         // 要合并的键
-        $($field:ident)*
-    } => { $( $this.$field.coalesce_clone(&$other.$field); )* };
+        $( $field:ident $( => $code:tt)? )*
+    } => {
+        // 模式匹配提取字段
+        // * 🎯保证考虑了所有字段（避免新增字段遗漏）
+        let Self {
+            $($field: _),*
+        } = &$other;
+        // 逐个拷贝 / 执行其它代码（亦可直接使用字段）
+        $(
+            coalesce_clones! {
+                @FIELD
+                $this => $other,
+                $field $($code)?
+            };
+        )*
+    };
+    { // 简单合并字段
+        @FIELD
+        $this:ident => $other:ident,
+        $field:ident
+    } => {
+        $this.$field.coalesce_clone(&$other.$field);
+    };
+    { // 执行其它代码
+        @FIELD
+        $this:ident => $other:ident,
+        $field:ident
+        $code:tt
+    } => {
+        $code
+    };
 }
 
 /// NAVM虚拟机（运行时）启动配置
@@ -569,18 +598,23 @@ impl LaunchConfig {
     pub fn merge_from(&mut self, other: &Self) {
         // 合并所有内部Option | 使用工具宏简化语法
         coalesce_clones! {
-            other => self;
+            Self: other => self;
             translators
-            // command // ! 此键需递归处理
             websocket
             prelude_nal
             user_input
             input_mode
             auto_restart
             strict_mode
-        }
-        // 递归合并所有【含有可选键】的值
-        LaunchConfigCommand::merge_as_key(&mut self.command, &other.command);
+            short_float_epoch
+            // 递归合并所有【含有可选键】的值
+            command => {
+                LaunchConfigCommand::merge_as_key(&mut self.command, &other.command);
+            }
+            // 以下字段仍然保留自身数据
+            config_path => {}
+            description => {}
+        };
     }
 }
 
@@ -589,9 +623,10 @@ impl LaunchConfigCommand {
     /// * 🚩`Some(..)` => `None`
     pub fn merge_from(&mut self, other: &Self) {
         coalesce_clones! {
-            other => self;
+            Self: other => self;
             cmd_args
             current_dir
+            cmd => {}
         }
     }
 
