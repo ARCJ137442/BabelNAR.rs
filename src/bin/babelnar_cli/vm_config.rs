@@ -846,9 +846,9 @@ pub mod tests {
                 ..Default::default()
             }
             r#"{
-                "shortFloatEpoch": 0.1,
+                "shortFloatEpoch": 1.0,
             }"# => LaunchConfig {
-                short_float_epoch: Some(Float::NAN),
+                short_float_epoch: Some(1.0),
                 ..Default::default()
             }
         }
