@@ -6,7 +6,7 @@ use anyhow::Result;
 use nar_dev_utils::{if_return, ResultBoost};
 use narsese::api::FloatPrecision;
 use navm::{cmd::Cmd, output::Output, vm::VmRuntime};
-use std::{ops::ControlFlow, path::Path};
+use std::{ops::ControlFlow, path::Path, time::Duration};
 
 // Narsese预期
 mod narsese_expectation;
@@ -78,135 +78,185 @@ pub fn put_nal(
     nal_root_path: &Path,
     precision_epoch: FloatPrecision,
 ) -> Result<()> {
-    // TODO: 【2024-08-01 10:54:34】各个分支单独提取到函数
     use NALInput::*;
     match input {
         // 置入NAVM指令
         Put(cmd) => vm.input_cmd(cmd),
         // 睡眠
-        Sleep(duration) => {
-            // 睡眠指定时间
-            std::thread::sleep(duration);
-            // 返回`ok`
-            Ok(())
-        }
+        Sleep(duration) => nal_sleep(duration),
         // 等待一个符合预期的NAVM输出
-        Await(expectation) => loop {
-            let output = match vm.fetch_output() {
-                Ok(output) => {
-                    // 加入缓存
-                    output_cache.put(output.clone())?;
-                    // ! ❌【2024-04-03 01:19:06】无法再返回引用：不再能直接操作数组，MutexGuard也不允许返回引用
-                    // output_cache.last().unwrap()
-                    output
-                }
-                Err(e) => {
-                    println!("尝试拉取输出出错：{e}");
-                    continue;
-                }
-            };
-            // 只有匹配了才返回
-            if expectation.matches(&output, precision_epoch) {
-                break Ok(());
-            }
-        },
+        Await(expectation) => nal_await(vm, output_cache, expectation, precision_epoch),
         // 检查是否有NAVM输出符合预期
         ExpectContains(expectation) => {
-            // 先尝试拉取所有输出到「输出缓存」
-            while let Some(output) = vm.try_fetch_output()? {
-                output_cache.put(output)?;
-            }
-            // 然后读取并匹配缓存
-            let result = output_cache.for_each(|output| {
-                match expectation.matches(output, precision_epoch) {
-                    true => ControlFlow::Break(true),
-                    false => ControlFlow::Continue(()),
-                }
-            })?;
-            match result {
-                // 只有匹配到了一个，才返回Ok
-                Some(true) => Ok(()),
-                // 否则返回Err
-                _ => Err(OutputExpectationError::ExpectedNotExists(expectation).into()),
-            }
-            // for output in output_cache.for_each() {
-            //     // 只有匹配了才返回Ok
-            //     if expectation.matches(output) {
-            //     }
-            // }
+            nal_expect_contains(vm, output_cache, expectation, precision_epoch)
         }
         // 检查在指定的「最大步数」内，是否有NAVM输出符合预期（弹性步数`0~最大步数`）
-        ExpectCycle(max_cycles, step_cycles, step_duration, expectation) => {
-            let mut cycles = 0;
-            while cycles < max_cycles {
-                // 推理步进
-                vm.input_cmd(Cmd::CYC(step_cycles))?;
-                cycles += step_cycles;
-                // 等待指定时长
-                if let Some(duration) = step_duration {
-                    std::thread::sleep(duration);
-                }
-                // 先尝试拉取所有输出到「输出缓存」
-                while let Some(output) = vm.try_fetch_output()? {
-                    output_cache.put(output)?;
-                }
-                // 然后读取并匹配缓存
-                let result = output_cache.for_each(|output| {
-                    match expectation.matches(output, precision_epoch) {
-                        true => ControlFlow::Break(true),
-                        false => ControlFlow::Continue(()),
-                    }
-                })?;
-                // 匹配到一个⇒提前返回Ok
-                if let Some(true) = result {
-                    OutputType::Info.print_line(&format!("expect-cycle({cycles}): {expectation}"));
-                    return Ok(());
-                }
-            }
-            // 步进完所有步数，仍未有匹配⇒返回Err
-            Err(OutputExpectationError::ExpectedNotExists(expectation).into())
-        }
+        ExpectCycle(max_cycles, step_cycles, step_duration, expectation) => nal_expect_cycle(
+            max_cycles,
+            vm,
+            step_cycles,
+            step_duration,
+            output_cache,
+            expectation,
+            precision_epoch,
+        ),
         // 保存（所有）输出
         // * 🚩输出到一个文本文件中
         // * ✨复合JSON「对象数组」格式
-        SaveOutputs(path_str) => {
-            // 先收集所有输出的字符串
-            let mut file_str = "[".to_string();
-            output_cache.for_each(|output| {
-                // 换行制表
-                file_str += "\n\t";
-                // 统一追加到字符串中
-                file_str += &output.to_json_string();
-                // 逗号
-                file_str.push(',');
-                // 继续
-                ControlFlow::<()>::Continue(())
-            })?;
-            // 删去尾后逗号
-            file_str.pop();
-            // 换行，终止符
-            file_str += "\n]";
-            // 保存到文件中 | 使用基于`nal_root_path`的相对路径
-            let path = nal_root_path.join(path_str.trim());
-            std::fs::write(path, file_str)?;
-            // 提示 | ❌【2024-04-09 22:22:04】执行「NAL输入」时，应始终静默
-            // println_cli!([Info] "已将所有NAVM输出保存到文件{path:?}");
-            // 返回
-            Ok(())
-        }
+        SaveOutputs(path_str) => nal_save_outputs(output_cache, nal_root_path, path_str),
         // 终止虚拟机
         Terminate {
             if_not_user,
             result,
-        } => {
-            // 检查前提条件 | 仅「非用户输入」&启用了用户输入 ⇒ 放弃终止
-            if_return! { if_not_user && enabled_user_input => Ok(()) }
+        } => nal_terminate(if_not_user, enabled_user_input, vm, result),
+    }
+}
 
-            // 终止虚拟机
-            vm.terminate()?;
+fn nal_sleep(duration: Duration) -> Result<()> {
+    // 睡眠指定时间
+    std::thread::sleep(duration);
+    // 返回`ok`
+    Ok(())
+}
 
-            // 返回
-            result.transform_err(error_anyhow)
+fn nal_await(
+    vm: &mut impl VmRuntime,
+    output_cache: &mut impl VmOutputCache,
+    expectation: OutputExpectation,
+    precision_epoch: f64,
+) -> Result<()> {
+    loop {
+        let output = match vm.fetch_output() {
+            Ok(output) => {
+                // 加入缓存
+                output_cache.put(output.clone())?;
+                // ! ❌【2024-04-03 01:19:06】无法再返回引用：不再能直接操作数组，MutexGuard也不允许返回引用
+                // output_cache.last().unwrap()
+                output
+            }
+            Err(e) => {
+                println!("尝试拉取输出出错：{e}");
+                continue;
+            }
+        };
+        // 只有匹配了才返回
+        if expectation.matches(&output, precision_epoch) {
+            break Ok(());
         }
     }
+}
+
+fn nal_expect_contains(
+    vm: &mut impl VmRuntime,
+    output_cache: &mut impl VmOutputCache,
+    expectation: OutputExpectation,
+    precision_epoch: f64,
+) -> Result<()> {
+    // 先尝试拉取所有输出到「输出缓存」
+    while let Some(output) = vm.try_fetch_output()? {
+        output_cache.put(output)?;
+    }
+    // 然后读取并匹配缓存
+    let result =
+        output_cache.for_each(
+            |output| match expectation.matches(output, precision_epoch) {
+                true => ControlFlow::Break(true),
+                false => ControlFlow::Continue(()),
+            },
+        )?;
+    // for output in output_cache.for_each() {
+    //     // 只有匹配了才返回Ok
+    //     if expectation.matches(output) {
+    //     }
+    // }
+    match result {
+        // 只有匹配到了一个，才返回Ok
+        Some(true) => Ok(()),
+        // 否则返回Err
+        _ => Err(OutputExpectationError::ExpectedNotExists(expectation).into()),
+    }
+}
+
+fn nal_expect_cycle(
+    max_cycles: usize,
+    vm: &mut impl VmRuntime,
+    step_cycles: usize,
+    step_duration: Option<Duration>,
+    output_cache: &mut impl VmOutputCache,
+    expectation: OutputExpectation,
+    precision_epoch: f64,
+) -> Result<()> {
+    let mut cycles = 0;
+    while cycles < max_cycles {
+        // 推理步进
+        vm.input_cmd(Cmd::CYC(step_cycles))?;
+        cycles += step_cycles;
+        // 等待指定时长
+        if let Some(duration) = step_duration {
+            std::thread::sleep(duration);
+        }
+        // 先尝试拉取所有输出到「输出缓存」
+        while let Some(output) = vm.try_fetch_output()? {
+            output_cache.put(output)?;
+        }
+        // 然后读取并匹配缓存
+        let result =
+            output_cache.for_each(
+                |output| match expectation.matches(output, precision_epoch) {
+                    true => ControlFlow::Break(true),
+                    false => ControlFlow::Continue(()),
+                },
+            )?;
+        // 匹配到一个⇒提前返回Ok
+        if let Some(true) = result {
+            OutputType::Info.print_line(&format!("expect-cycle({cycles}): {expectation}"));
+            return Ok(());
+        }
+    }
+    // 步进完所有步数，仍未有匹配⇒返回Err
+    Err(OutputExpectationError::ExpectedNotExists(expectation).into())
+}
+
+fn nal_save_outputs(
+    output_cache: &mut impl VmOutputCache,
+    nal_root_path: &Path,
+    path_str: String,
+) -> Result<()> {
+    // 先收集所有输出的字符串
+    let mut file_str = "[".to_string();
+    output_cache.for_each(|output| {
+        // 换行制表
+        file_str += "\n\t";
+        // 统一追加到字符串中
+        file_str += &output.to_json_string();
+        // 逗号
+        file_str.push(',');
+        // 继续
+        ControlFlow::<()>::Continue(())
+    })?;
+    // 删去尾后逗号
+    file_str.pop();
+    // 换行，终止符
+    file_str += "\n]";
+    // 保存到文件中 | 使用基于`nal_root_path`的相对路径
+    let path = nal_root_path.join(path_str.trim());
+    std::fs::write(path, file_str)?;
+    // 提示 | ❌【2024-04-09 22:22:04】执行「NAL输入」时，应始终静默
+    // println_cli!([Info] "已将所有NAVM输出保存到文件{path:?}");
+    // 返回
+    Ok(())
+}
+
+fn nal_terminate(
+    if_not_user: bool,
+    enabled_user_input: bool,
+    vm: &mut impl VmRuntime,
+    result: std::result::Result<(), String>,
+) -> Result<()> {
+    // 检查前提条件 | 仅「非用户输入」&启用了用户输入 ⇒ 放弃终止
+    if_return! { if_not_user && enabled_user_input => Ok(()) }
+    // 终止虚拟机
+    vm.terminate()?;
+    // 返回
+    result.transform_err(error_anyhow)
 }
