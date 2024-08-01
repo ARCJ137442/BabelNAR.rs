@@ -5,7 +5,7 @@ use super::term_equal::*;
 use anyhow::Result;
 use nar_dev_utils::if_return;
 use narsese::{
-    api::NarseseValue,
+    api::{FloatPrecision, NarseseValue},
     conversion::{
         inter_type::lexical_fold::TryFoldInto,
         string::impl_enum::{format_instances::FORMAT_ASCII as FORMAT_ASCII_ENUM, NarseseFormat},
@@ -21,11 +21,19 @@ use util::macro_once;
 
 /// 判断「输出是否（在Narsese语义层面）符合预期」
 /// * 🎯词法Narsese⇒枚举Narsese，以便从语义上判断
-pub fn is_expected_narsese_lexical(expected: &Narsese, out: &Narsese) -> bool {
-    _is_expected_narsese(expected.clone(), out.clone())
+pub fn is_expected_narsese_lexical(
+    expected: &Narsese,
+    out: &Narsese,
+    precision_epoch: FloatPrecision,
+) -> bool {
+    _is_expected_narsese(expected.clone(), out.clone(), precision_epoch)
 }
 
-fn _is_expected_narsese(mut expected: Narsese, mut out: Narsese) -> bool {
+fn _is_expected_narsese(
+    mut expected: Narsese,
+    mut out: Narsese,
+    precision_epoch: FloatPrecision,
+) -> bool {
     // 先比对词项
     fn get_term_mut(narsese: &mut Narsese) -> &mut Term {
         use NarseseValue::*;
@@ -40,13 +48,14 @@ fn _is_expected_narsese(mut expected: Narsese, mut out: Narsese) -> bool {
     }
     // * 🚩特制的「词项判等」截断性逻辑 | 🚩语义层面判等词项
     if_return! {
-        !semantical_equal_mut(get_term_mut(&mut expected), get_term_mut(&mut out)) => false
+        !semantical_equal_mut(get_term_mut(&mut expected), get_term_mut(&mut out))
+        => false
     };
     // * 🚩折叠剩余部分，并开始判断
     let fold = PartialFoldResult::try_from;
     match (fold(expected), fold(out)) {
         // * 🚩若均解析成功⇒进一步判等
-        (Ok(expected), Ok(out)) => expected.is_expected_out(&out),
+        (Ok(expected), Ok(out)) => expected.is_expected_out(&out, precision_epoch),
         // * 🚩任一解析失败⇒直接失败
         _ => false,
     }
@@ -68,7 +77,7 @@ struct PartialFoldResult {
 /// * 🚩【2024-06-11 16:02:10】目前对「词项比对」使用特殊逻辑，而对其它结构照常比较
 /// * ✅均已经考虑「没有值可判断」的情况
 impl PartialFoldResult {
-    fn is_expected_out(&self, out: &Self) -> bool {
+    fn is_expected_out(&self, out: &Self, precision_epoch: FloatPrecision) -> bool {
         macro_once! {
             /// 一系列针对Option解包的条件判断：
             /// * 🚩均为Some⇒展开内部代码逻辑
@@ -121,13 +130,13 @@ impl PartialFoldResult {
                 // 真值一致
                 expected @ self.truth,
                 out @ out.truth =>
-                is_expected_truth(expected, out) // * 🚩特殊情况（需兼容）特殊处理
+                is_expected_truth(expected, out, precision_epoch) // * 🚩特殊情况（需兼容）特殊处理
             } && {
                 @EMPTY_WILDCARD // ! 空值通配
                 // 预算值一致
                 expected @ self.budget,
                 out @ out.budget =>
-                is_expected_budget(expected, out) // * 🚩特殊情况（需兼容）特殊处理
+                is_expected_budget(expected, out, precision_epoch) // * 🚩特殊情况（需兼容）特殊处理
             }
         }
     }
@@ -188,17 +197,43 @@ impl TryFrom<Narsese> for PartialFoldResult {
     }
 }
 
+/// 判断「短浮点之间是否相等」（在指定精度范围内）
+/// * 🎯应对不同小数精度的NARS输出，统一在某精度内相等
+/// * 🚩【2024-08-01 10:36:31】需要引入配置
+/// * 📝|expected - out| ≤ precision_epoch
+fn is_expected_float(
+    expected: &FloatPrecision,
+    out: &FloatPrecision,
+    precision_epoch: FloatPrecision,
+) -> bool {
+    // * 🚩精度=0 ⇒ 直接判等
+    if precision_epoch == 0.0 {
+        return expected == out;
+    }
+    // * 🚩其它 ⇒ 绝对值小于等于
+    (expected - out).abs() <= precision_epoch
+}
+
 /// 判断「输出是否在真值层面符合预期」
 /// * 🎯空真值的语句，应该符合「固定真值的语句」的预期——相当于「通配符」
 #[inline]
-fn is_expected_truth(expected: &EnumTruth, out: &EnumTruth) -> bool {
+fn is_expected_truth(
+    expected: &EnumTruth,
+    out: &EnumTruth,
+    precision_epoch: FloatPrecision,
+) -> bool {
     match (expected, out) {
         // 预期空真值⇒通配
         (EnumTruth::Empty, ..) => true,
-        // 预期单真值
-        (EnumTruth::Single(f_e), EnumTruth::Single(f_o) | EnumTruth::Double(f_o, ..)) => f_e == f_o,
+        // 预期单真值⇒部分通配
+        (EnumTruth::Single(f_e), EnumTruth::Single(f_o) | EnumTruth::Double(f_o, ..)) => {
+            is_expected_float(f_e, f_o, precision_epoch)
+        }
         // 预期双真值
-        (EnumTruth::Double(..), EnumTruth::Double(..)) => expected == out,
+        (EnumTruth::Double(f_e, c_e), EnumTruth::Double(f_o, c_o)) => {
+            is_expected_float(f_e, f_o, precision_epoch)
+                && is_expected_float(c_e, c_o, precision_epoch)
+        }
         // 其它情况
         _ => false,
     }
@@ -207,7 +242,11 @@ fn is_expected_truth(expected: &EnumTruth, out: &EnumTruth) -> bool {
 /// 判断「输出是否在预算值层面符合预期」
 /// * 🎯空预算的语句，应该符合「固定预算值的语句」的预期——相当于「通配符」
 #[inline]
-fn is_expected_budget(expected: &EnumBudget, out: &EnumBudget) -> bool {
+fn is_expected_budget(
+    expected: &EnumBudget,
+    out: &EnumBudget,
+    precision_epoch: FloatPrecision,
+) -> bool {
     match (expected, out) {
         // 预期空预算⇒通配
         (EnumBudget::Empty, ..) => true,
@@ -215,14 +254,21 @@ fn is_expected_budget(expected: &EnumBudget, out: &EnumBudget) -> bool {
         (
             EnumBudget::Single(p_e),
             EnumBudget::Single(p_o) | EnumBudget::Double(p_o, ..) | EnumBudget::Triple(p_o, ..),
-        ) => p_e == p_o,
+        ) => is_expected_float(p_e, p_o, precision_epoch),
         // 预期双预算
         (
             EnumBudget::Double(p_e, d_e),
             EnumBudget::Double(p_o, d_o) | EnumBudget::Triple(p_o, d_o, ..),
-        ) => p_e == p_o && d_e == d_o,
+        ) => {
+            is_expected_float(p_e, p_o, precision_epoch)
+                && is_expected_float(d_e, d_o, precision_epoch)
+        }
         // 预期三预算
-        (EnumBudget::Triple(..), EnumBudget::Triple(..)) => expected == out,
+        (EnumBudget::Triple(p_e, d_e, q_e), EnumBudget::Triple(p_o, d_o, q_o)) => {
+            is_expected_float(p_e, p_o, precision_epoch)
+                && is_expected_float(d_e, d_o, precision_epoch)
+                && is_expected_float(q_e, q_o, precision_epoch)
+        }
         // 其它情况
         _ => false,
     }
@@ -253,60 +299,82 @@ mod tests {
 
     #[test]
     fn is_expected_narsese_lexical() {
+        /// 正例断言带精度
+        fn test(expected: Narsese, out: Narsese, precision_epoch: FloatPrecision) {
+            assert!(
+                super::is_expected_narsese_lexical(&expected, &out, precision_epoch),
+                "正例断言失败！\nexpected: {expected:?}, out: {out:?}"
+            );
+        }
+        /// 反例断言带精度
+        fn test_negative(expected: Narsese, out: Narsese, precision_epoch: FloatPrecision) {
+            assert!(
+                !super::is_expected_narsese_lexical(&expected, &out, precision_epoch),
+                "反例断言失败！\nexpected: {expected:?}, out: {out:?}"
+            );
+        }
         // * 🚩正例
         macro_once! {
-            macro test($($expected:expr => $out:expr $(,)?)*) {
-                $(
-                    let expected = nse!($expected);
-                    let out = nse!($out);
-                    assert!(
-                        super::is_expected_narsese_lexical(&expected, &out),
-                        "正例断言失败！\nexpected: {expected:?}, out: {out:?}"
-                    );
-                )*
+            macro test {
+                ( // 分派&展开
+                    $($expected:literal ==$config:tt== $out:literal $(,)?)*
+                ) => {
+                    $(
+                        test!(@SPECIFIC $expected, $out, $config);
+                    )*
+                }
+                ( // 正例
+                    @SPECIFIC
+                    $expected:literal,
+                    $out:literal,
+                    {$epoch:literal}
+                ) => {
+                    test(nse!($expected), nse!($out), $epoch)
+                }
+                ( // 反例
+                    @SPECIFIC
+                    $expected:literal,
+                    $out:literal,
+                    {! $epoch:literal}
+                ) => {
+                    test_negative(nse!($expected), nse!($out), $epoch)
+                }
             }
+            // * 🚩正例
             // 常规词项、语句、任务
-            "A"  => "A",
-            "A." => "A.",
-            "A?" => "A?",
-            "A! %1.0;0.9%" => "A! %1.0;0.9%"
-            "$0.5;0.5;0.5$ A@" => "$0.5;0.5;0.5$ A@",
-            "$0.5;0.5;0.5$ A. %1.0;0.9%" => "$0.5;0.5;0.5$ A. %1.0;0.9%",
+            "A"  =={0.0}== "A",
+            "A." =={0.0}== "A.",
+            "A?" =={0.0}== "A?",
+            "A! %1.0;0.9%" =={0.0}== "A! %1.0;0.9%"
+            "$0.5;0.5;0.5$ A@" =={0.0}== "$0.5;0.5;0.5$ A@",
+            "$0.5;0.5;0.5$ A. %1.0;0.9%" =={0.0}== "$0.5;0.5;0.5$ A. %1.0;0.9%",
             // 真值通配
-            "A." => "A. %1.0;0.9%",
-            "A!" => "A! %1.0;0.9%",
+            "A." =={0.0}== "A. %1.0;0.9%",
+            "A!" =={0.0}== "A! %1.0;0.9%",
             // 预算值通配
-            "A." => "$0.5;0.5;0.5$ A.",
-            "A!" => "$0.5;0.5;0.5$ A!",
-            "A." => "$0.5;0.5;0.5$ A. %1.0;0.9%",
-            "A!" => "$0.5;0.5;0.5$ A! %1.0;0.9%",
+            "A." =={0.0}== "$0.5;0.5;0.5$ A.",
+            "A!" =={0.0}== "$0.5;0.5;0.5$ A!",
+            "A." =={0.0}== "$0.5;0.5;0.5$ A. %1.0;0.9%",
+            "A!" =={0.0}== "$0.5;0.5;0.5$ A! %1.0;0.9%",
+            // TODO: 真值精度内匹配
+            // TODO: 预算值精度内匹配
             // 源自实际应用
                "<(&&,<$1 --> lock>,<$2 --> key>) ==> <$1 --> (/,open,$2,_)>>. %1.00;0.45%"
-            => "<(&&,<$1 --> key>,<$2 --> lock>) ==> <$2 --> (/,open,$1,_)>>. %1.00;0.45%"
-        }
-        // * 🚩反例
-        macro_once! {
-            macro test($($expected:literal != $out:literal $(,)?)*) {
-                $(
-                    let expected = nse!($expected);
-                    let out = nse!($out);
-                    assert!(
-                        !super::is_expected_narsese_lexical(&expected, &out),
-                        "反例断言失败！\nexpected: {expected:?}, out: {out:?}"
-                    );
-                )*
-            }
-            "A"  != "B",
-            "A." != "A?",
-            "A?" != "<A --> B>?",
+            =={0.0}== "<(&&,<$1 --> key>,<$2 --> lock>) ==> <$2 --> (/,open,$1,_)>>. %1.00;0.45%"
+            // * 🚩反例
+            "A"  =={!0.0}== "B",
+            "A." =={!0.0}== "A?",
+            "A?" =={!0.0}== "<A --> B>?",
             // 真值通配（反向就不行）
-            "A. %1.0;0.9%" != "A.",
-            "A! %1.0;0.9%" != "A!",
+            "A. %1.0;0.9%" =={!0.0}== "A.",
+            "A! %1.0;0.9%" =={!0.0}== "A!",
             // 预算值通配（反向就不行）
-            "$0.5;0.5;0.5$ A."           != "A.",
-            "$0.5;0.5;0.5$ A!"           != "A!",
-            "$0.5;0.5;0.5$ A. %1.0;0.9%" != "A.",
-            "$0.5;0.5;0.5$ A! %1.0;0.9%" != "A!",
+            "$0.5;0.5;0.5$ A."           =={!0.0}== "A.",
+            "$0.5;0.5;0.5$ A!"           =={!0.0}== "A!",
+            "$0.5;0.5;0.5$ A. %1.0;0.9%" =={!0.0}== "A.",
+            "$0.5;0.5;0.5$ A! %1.0;0.9%" =={!0.0}== "A!",
+            // TODO: 真值精度内失配
+            // TODO: 预算值精度内失配
         }
     }
 

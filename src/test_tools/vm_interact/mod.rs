@@ -4,6 +4,7 @@ use super::{NALInput, OutputExpectation, OutputExpectationError};
 use crate::cli_support::{error_handling_boost::error_anyhow, io::output_print::OutputType};
 use anyhow::Result;
 use nar_dev_utils::{if_return, ResultBoost};
+use narsese::api::FloatPrecision;
 use navm::{cmd::Cmd, output::Output, vm::VmRuntime};
 use std::{ops::ControlFlow, path::Path};
 
@@ -17,7 +18,7 @@ mod term_equal;
 /// 实现/预期匹配功能
 impl OutputExpectation {
     /// 判断一个「NAVM输出」是否与自身相符合
-    pub fn matches(&self, output: &Output) -> bool {
+    pub fn matches(&self, output: &Output, precision_epoch: FloatPrecision) -> bool {
         // 输出类型
         if let Some(expected) = &self.output_type {
             if_return! { expected != output.type_name() => false }
@@ -29,7 +30,10 @@ impl OutputExpectation {
             (Some(..), None) => return false,
             // 预期输出都有⇒判断Narsese是否相同
             (Some(expected), Some(out)) => {
-                if_return! { !is_expected_narsese_lexical(expected, out) => false }
+                if_return! {
+                    !is_expected_narsese_lexical(expected, out, precision_epoch)
+                    => false
+                }
             }
             _ => (),
         }
@@ -72,19 +76,22 @@ pub fn put_nal(
     // 不能传入「启动配置」，就要传入「是否启用用户输入」状态变量
     enabled_user_input: bool,
     nal_root_path: &Path,
+    precision_epoch: FloatPrecision,
 ) -> Result<()> {
+    // TODO: 【2024-08-01 10:54:34】各个分支单独提取到函数
+    use NALInput::*;
     match input {
         // 置入NAVM指令
-        NALInput::Put(cmd) => vm.input_cmd(cmd),
+        Put(cmd) => vm.input_cmd(cmd),
         // 睡眠
-        NALInput::Sleep(duration) => {
+        Sleep(duration) => {
             // 睡眠指定时间
             std::thread::sleep(duration);
             // 返回`ok`
             Ok(())
         }
         // 等待一个符合预期的NAVM输出
-        NALInput::Await(expectation) => loop {
+        Await(expectation) => loop {
             let output = match vm.fetch_output() {
                 Ok(output) => {
                     // 加入缓存
@@ -99,20 +106,22 @@ pub fn put_nal(
                 }
             };
             // 只有匹配了才返回
-            if expectation.matches(&output) {
+            if expectation.matches(&output, precision_epoch) {
                 break Ok(());
             }
         },
         // 检查是否有NAVM输出符合预期
-        NALInput::ExpectContains(expectation) => {
+        ExpectContains(expectation) => {
             // 先尝试拉取所有输出到「输出缓存」
             while let Some(output) = vm.try_fetch_output()? {
                 output_cache.put(output)?;
             }
             // 然后读取并匹配缓存
-            let result = output_cache.for_each(|output| match expectation.matches(output) {
-                true => ControlFlow::Break(true),
-                false => ControlFlow::Continue(()),
+            let result = output_cache.for_each(|output| {
+                match expectation.matches(output, precision_epoch) {
+                    true => ControlFlow::Break(true),
+                    false => ControlFlow::Continue(()),
+                }
             })?;
             match result {
                 // 只有匹配到了一个，才返回Ok
@@ -127,7 +136,7 @@ pub fn put_nal(
             // }
         }
         // 检查在指定的「最大步数」内，是否有NAVM输出符合预期（弹性步数`0~最大步数`）
-        NALInput::ExpectCycle(max_cycles, step_cycles, step_duration, expectation) => {
+        ExpectCycle(max_cycles, step_cycles, step_duration, expectation) => {
             let mut cycles = 0;
             while cycles < max_cycles {
                 // 推理步进
@@ -142,9 +151,11 @@ pub fn put_nal(
                     output_cache.put(output)?;
                 }
                 // 然后读取并匹配缓存
-                let result = output_cache.for_each(|output| match expectation.matches(output) {
-                    true => ControlFlow::Break(true),
-                    false => ControlFlow::Continue(()),
+                let result = output_cache.for_each(|output| {
+                    match expectation.matches(output, precision_epoch) {
+                        true => ControlFlow::Break(true),
+                        false => ControlFlow::Continue(()),
+                    }
                 })?;
                 // 匹配到一个⇒提前返回Ok
                 if let Some(true) = result {
@@ -158,7 +169,7 @@ pub fn put_nal(
         // 保存（所有）输出
         // * 🚩输出到一个文本文件中
         // * ✨复合JSON「对象数组」格式
-        NALInput::SaveOutputs(path_str) => {
+        SaveOutputs(path_str) => {
             // 先收集所有输出的字符串
             let mut file_str = "[".to_string();
             output_cache.for_each(|output| {
@@ -184,7 +195,7 @@ pub fn put_nal(
             Ok(())
         }
         // 终止虚拟机
-        NALInput::Terminate {
+        Terminate {
             if_not_user,
             result,
         } => {

@@ -70,6 +70,10 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+/// 默认的浮点精度
+/// * 🚩【2024-08-01 10:28:12】目前与[`narsese`]统一使用[`f64`]
+pub type Float = narsese::api::FloatPrecision;
+
 /// 允许的配置文件扩展名
 /// * 🚩【2024-04-07 18:30:24】目前支持JSON与HJSON
 /// * 📌其顺序决定了在「扩展名优先补充」中的遍历顺序
@@ -99,9 +103,11 @@ macro_rules! coalesce_clones {
 ///   * 📌这意味着其总是能派生[`Default`]
 /// * ⚠️其中的所有**相对路径**，在[`read_config_extern`]中都基于**配置文件自身**
 ///   * 🎯不论CLI自身所处何处，均保证配置读取稳定
+/// * 🚩【2024-08-01 10:31:10】因引入浮点类型[`Float`]，放弃派生[`Eq`]特征（传递性丧失）
+///   * 📄含[`NaN`](Float::NAN)、[`Infinity`](Float::INFINITY)、[`-Infinity`](Float::NEG_INFINITY)
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct LaunchConfig {
     /// 配置的加载路径
     /// * 🎯用于记录「基于配置自身的配置路径」
@@ -162,6 +168,11 @@ pub struct LaunchConfig {
     /// * 🚩【2024-04-04 02:19:36】默认值由「运行时转换」决定
     ///   * 🎯兼容「多启动配置合并」
     pub strict_mode: Option<bool>,
+
+    /// 短浮点精度
+    /// * 🎯判等模糊性：用于解决不同版本NARS的小数位数差异问题（统一限定在最低位）
+    /// * 🚩只需「真值/预算值」处的短浮点与预期之差在一定范围内，而无需绝对精确匹配
+    pub short_float_epoch: Option<Float>,
 }
 
 /// 使用`const`常量存储「空启动配置」
@@ -179,6 +190,7 @@ const EMPTY_LAUNCH_CONFIG: LaunchConfig = LaunchConfig {
     input_mode: None,
     auto_restart: None,
     strict_mode: None,
+    short_float_epoch: None,
 };
 
 /// NAVM虚拟机（运行时）运行时配置
@@ -186,7 +198,7 @@ const EMPTY_LAUNCH_CONFIG: LaunchConfig = LaunchConfig {
 /// * 🚩自[`LaunchConfig`]加载而来
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 🔗参考：<https://serde.rs/container-attrs.html>
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RuntimeConfig {
     /// 配置的加载路径
     /// * 🎯用于记录「基于配置自身的配置路径」
@@ -237,6 +249,12 @@ pub struct RuntimeConfig {
     /// * 📜默认值：`false`（关闭）
     #[serde(default = "bool_false")]
     pub strict_mode: bool,
+
+    /// 短浮点精度
+    /// * 🚩必选：[`None`]将视为默认值
+    /// * 📜默认值：`0.0`（绝对匹配）
+    #[serde(default = "default_epoch")]
+    pub short_float_epoch: Float,
 }
 
 /// 布尔值`true`
@@ -255,6 +273,13 @@ const fn bool_true() -> bool {
 #[inline(always)]
 const fn bool_false() -> bool {
     false
+}
+
+/// 默认精度
+/// * 🎯配置解析中「默认为`0.0`」的默认值指定
+#[inline(always)]
+const fn default_epoch() -> Float {
+    0.0
 }
 
 /// 尝试将启动时配置[`LaunchConfig`]转换成运行时配置[`RuntimeConfig`]
@@ -277,13 +302,15 @@ impl TryFrom<LaunchConfig> for RuntimeConfig {
             prelude_nal: config.prelude_nal,
             // * 🚩默认项统一用`unwrap_or`
             // 默认启用用户输入
-            user_input: config.user_input.unwrap_or(true),
+            user_input: config.user_input.unwrap_or(bool_true()),
             // 输入模式传递默认值
             input_mode: config.input_mode.unwrap_or_default(),
             // 不自动重启
-            auto_restart: config.auto_restart.unwrap_or(false),
+            auto_restart: config.auto_restart.unwrap_or(bool_false()),
             // 不开启严格模式
-            strict_mode: config.strict_mode.unwrap_or(false),
+            strict_mode: config.strict_mode.unwrap_or(bool_false()),
+            // 完全严格的短浮点
+            short_float_epoch: config.short_float_epoch.unwrap_or(default_epoch()),
         })
     }
 }
