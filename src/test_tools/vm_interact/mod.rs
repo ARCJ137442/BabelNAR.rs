@@ -222,7 +222,17 @@ fn nal_save_outputs(
     nal_root_path: &Path,
     path_str: String,
 ) -> Result<()> {
-    // 先收集所有输出的字符串
+    let file_str = collect_outputs_to_json(output_cache)?;
+    // 保存到文件中 | 使用基于`nal_root_path`的相对路径
+    let path = nal_root_path.join(path_str.trim());
+    std::fs::write(path, file_str)?;
+    // 提示 | ❌【2024-04-09 22:22:04】执行「NAL输入」时，应始终静默
+    // println_cli!([Info] "已将所有NAVM输出保存到文件{path:?}");
+    // 返回
+    Ok(())
+}
+
+fn collect_outputs_to_json(output_cache: &mut impl VmOutputCache) -> Result<String> {
     let mut file_str = "[".to_string();
     output_cache.for_each(|output| {
         // 换行制表
@@ -234,17 +244,9 @@ fn nal_save_outputs(
         // 继续
         ControlFlow::<()>::Continue(())
     })?;
-    // 删去尾后逗号
     file_str.pop();
-    // 换行，终止符
     file_str += "\n]";
-    // 保存到文件中 | 使用基于`nal_root_path`的相对路径
-    let path = nal_root_path.join(path_str.trim());
-    std::fs::write(path, file_str)?;
-    // 提示 | ❌【2024-04-09 22:22:04】执行「NAL输入」时，应始终静默
-    // println_cli!([Info] "已将所有NAVM输出保存到文件{path:?}");
-    // 返回
-    Ok(())
+    Ok(file_str)
 }
 
 fn nal_terminate(
