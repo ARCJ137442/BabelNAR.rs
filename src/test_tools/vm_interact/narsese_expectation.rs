@@ -222,15 +222,16 @@ fn is_expected_truth(
     out: &EnumTruth,
     precision_epoch: FloatPrecision,
 ) -> bool {
-    match (expected, out) {
+    use EnumTruth::*;
+    match [expected, out] {
         // 预期空真值⇒通配
-        (EnumTruth::Empty, ..) => true,
+        [Empty, ..] => true,
         // 预期单真值⇒部分通配
-        (EnumTruth::Single(f_e), EnumTruth::Single(f_o) | EnumTruth::Double(f_o, ..)) => {
+        [Single(f_e), Single(f_o) | Double(f_o, ..)] => {
             is_expected_float(f_e, f_o, precision_epoch)
         }
         // 预期双真值
-        (EnumTruth::Double(f_e, c_e), EnumTruth::Double(f_o, c_o)) => {
+        [Double(f_e, c_e), Double(f_o, c_o)] => {
             is_expected_float(f_e, f_o, precision_epoch)
                 && is_expected_float(c_e, c_o, precision_epoch)
         }
@@ -247,24 +248,21 @@ fn is_expected_budget(
     out: &EnumBudget,
     precision_epoch: FloatPrecision,
 ) -> bool {
-    match (expected, out) {
+    use EnumBudget::*;
+    match [expected, out] {
         // 预期空预算⇒通配
-        (EnumBudget::Empty, ..) => true,
+        [Empty, ..] => true,
         // 预期单预算
-        (
-            EnumBudget::Single(p_e),
-            EnumBudget::Single(p_o) | EnumBudget::Double(p_o, ..) | EnumBudget::Triple(p_o, ..),
-        ) => is_expected_float(p_e, p_o, precision_epoch),
+        [Single(p_e), Single(p_o) | Double(p_o, ..) | Triple(p_o, ..)] => {
+            is_expected_float(p_e, p_o, precision_epoch)
+        }
         // 预期双预算
-        (
-            EnumBudget::Double(p_e, d_e),
-            EnumBudget::Double(p_o, d_o) | EnumBudget::Triple(p_o, d_o, ..),
-        ) => {
+        [Double(p_e, d_e), Double(p_o, d_o) | Triple(p_o, d_o, ..)] => {
             is_expected_float(p_e, p_o, precision_epoch)
                 && is_expected_float(d_e, d_o, precision_epoch)
         }
         // 预期三预算
-        (EnumBudget::Triple(p_e, d_e, q_e), EnumBudget::Triple(p_o, d_o, q_o)) => {
+        [Triple(p_e, d_e, q_e), Triple(p_o, d_o, q_o)] => {
             is_expected_float(p_e, p_o, precision_epoch)
                 && is_expected_float(d_e, d_o, precision_epoch)
                 && is_expected_float(q_e, q_o, precision_epoch)
@@ -281,13 +279,13 @@ pub fn is_expected_operation(expected: &Operation, out: &Operation) -> bool {
     if_return! { expected.operator_name != out.operator_name => false }
 
     // 比对操作参数：先判空
-    match (expected.no_params(), out.no_params()) {
+    match [expected.no_params(), out.no_params()] {
         // 预期无⇒通配
-        (true, ..) => true,
+        [true, ..] => true,
         // 预期有，输出无⇒直接pass
-        (false, true) => false,
+        [false, true] => false,
         // 预期有，输出有⇒判断参数是否相同
-        (false, false) => expected.params == out.params,
+        [false, false] => expected.params == out.params,
     }
 }
 
@@ -303,78 +301,96 @@ mod tests {
         fn test(expected: Narsese, out: Narsese, precision_epoch: FloatPrecision) {
             assert!(
                 super::is_expected_narsese_lexical(&expected, &out, precision_epoch),
-                "正例断言失败！\nexpected: {expected:?}, out: {out:?}"
+                "正例断言失败！\nexpected: {expected:?}\nout: {out:?}\nprecision_epoch: {precision_epoch:?}"
             );
         }
         /// 反例断言带精度
         fn test_negative(expected: Narsese, out: Narsese, precision_epoch: FloatPrecision) {
             assert!(
                 !super::is_expected_narsese_lexical(&expected, &out, precision_epoch),
-                "反例断言失败！\nexpected: {expected:?}, out: {out:?}"
+                "反例断言失败！\nexpected: {expected:?}\nout: {out:?}\nprecision_epoch: {precision_epoch:?}"
             );
         }
         // * 🚩正例
         macro_once! {
             macro test {
                 ( // 分派&展开
-                    $($expected:literal ==$config:tt== $out:literal $(,)?)*
+                    $($expected:literal $op:tt $config:tt => $out:literal $(,)?)*
                 ) => {
                     $(
-                        test!(@SPECIFIC $expected, $out, $config);
+                        test!(@SPECIFIC $expected, $out, $op, $config);
                     )*
                 }
-                ( // 正例
+                ( // * 📝正例语法："预期" ==(精度)=> "输出"
                     @SPECIFIC
                     $expected:literal,
                     $out:literal,
-                    {$epoch:literal}
+                    ==,
+                    ($epoch:expr)
                 ) => {
                     test(nse!($expected), nse!($out), $epoch)
                 }
-                ( // 反例
+                ( // * 📝反例语法："预期" !=(精度)=> "输出"
                     @SPECIFIC
                     $expected:literal,
                     $out:literal,
-                    {! $epoch:literal}
+                    !=,
+                    ($epoch:expr)
                 ) => {
                     test_negative(nse!($expected), nse!($out), $epoch)
                 }
             }
             // * 🚩正例
             // 常规词项、语句、任务
-            "A"  =={0.0}== "A",
-            "A." =={0.0}== "A.",
-            "A?" =={0.0}== "A?",
-            "A! %1.0;0.9%" =={0.0}== "A! %1.0;0.9%"
-            "$0.5;0.5;0.5$ A@" =={0.0}== "$0.5;0.5;0.5$ A@",
-            "$0.5;0.5;0.5$ A. %1.0;0.9%" =={0.0}== "$0.5;0.5;0.5$ A. %1.0;0.9%",
-            // 真值通配
-            "A." =={0.0}== "A. %1.0;0.9%",
-            "A!" =={0.0}== "A! %1.0;0.9%",
-            // 预算值通配
-            "A." =={0.0}== "$0.5;0.5;0.5$ A.",
-            "A!" =={0.0}== "$0.5;0.5;0.5$ A!",
-            "A." =={0.0}== "$0.5;0.5;0.5$ A. %1.0;0.9%",
-            "A!" =={0.0}== "$0.5;0.5;0.5$ A! %1.0;0.9%",
-            // TODO: 真值精度内匹配
-            // TODO: 预算值精度内匹配
-            // 源自实际应用
-               "<(&&,<$1 --> lock>,<$2 --> key>) ==> <$1 --> (/,open,$2,_)>>. %1.00;0.45%"
-            =={0.0}== "<(&&,<$1 --> key>,<$2 --> lock>) ==> <$2 --> (/,open,$1,_)>>. %1.00;0.45%"
-            // * 🚩反例
-            "A"  =={!0.0}== "B",
-            "A." =={!0.0}== "A?",
-            "A?" =={!0.0}== "<A --> B>?",
+            "A"  ==(0.0)=> "A",
+            "A"  !=(0.0)=> "B",
+            "A." ==(0.0)=> "A.",
+            "A." !=(0.0)=> "A?",
+            "A?" ==(0.0)=> "A?",
+            "A?" !=(0.0)=> "<A --> B>?",
+            "A! %1.0;0.9%" ==(0.0)=> "A! %1.0;0.9%"
+            "$0.5;0.5;0.5$ A@" ==(0.0)=> "$0.5;0.5;0.5$ A@",
+            "$0.5;0.5;0.5$ A. %1.0;0.9%" ==(0.0)=> "$0.5;0.5;0.5$ A. %1.0;0.9%",
             // 真值通配（反向就不行）
-            "A. %1.0;0.9%" =={!0.0}== "A.",
-            "A! %1.0;0.9%" =={!0.0}== "A!",
+            "A." ==(0.0)=> "A. %1.0;0.9%",
+            "A!" ==(0.0)=> "A! %1.0;0.9%",
+            "A. %1.0;0.9%" !=(0.0)=> "A.",
+            "A! %1.0;0.9%" !=(0.0)=> "A!",
             // 预算值通配（反向就不行）
-            "$0.5;0.5;0.5$ A."           =={!0.0}== "A.",
-            "$0.5;0.5;0.5$ A!"           =={!0.0}== "A!",
-            "$0.5;0.5;0.5$ A. %1.0;0.9%" =={!0.0}== "A.",
-            "$0.5;0.5;0.5$ A! %1.0;0.9%" =={!0.0}== "A!",
-            // TODO: 真值精度内失配
-            // TODO: 预算值精度内失配
+            "A." ==(0.0)=> "$0.5;0.5;0.5$ A.",
+            "A!" ==(0.0)=> "$0.5;0.5;0.5$ A!",
+            "A." ==(0.0)=> "$0.5;0.5;0.5$ A. %1.0;0.9%",
+            "A!" ==(0.0)=> "$0.5;0.5;0.5$ A! %1.0;0.9%",
+            "$0.5;0.5;0.5$ A."           !=(0.0)=> "A.",
+            "$0.5;0.5;0.5$ A!"           !=(0.0)=> "A!",
+            "$0.5;0.5;0.5$ A. %1.0;0.9%" !=(0.0)=> "A.",
+            "$0.5;0.5;0.5$ A! %1.0;0.9%" !=(0.0)=> "A!",
+            // 真值精度内匹配
+            "A. %0.5;0.9%" ==(0.00)=> "A. %0.5;0.9%",
+            "A. %0.5;0.9%" ==(0.10)=> "A. %0.55;0.95%", // +0.10
+            "A. %0.5;0.9%" ==(0.10)=> "A. %0.45;0.85%", // -0.10
+            "A. %0.5;0.9%" ==(0.10)=> "A. %0.55;0.85%", // ±0.10
+            "A. %0.5;0.9%" !=(0.01)=> "A. %0.55;0.85%", // ±0.01
+            "A. %0.5%" ==(0.1)=> "A. %0.55;0.85%", // +通配
+            "A. %0.5%" !=(-0.1)=> "A. %0.5%", // 负数永不匹配
+            "A. %0;1%" ==(FloatPrecision::INFINITY)=> "A. %1;0%", // 正无穷总是匹配
+            "A. %0.5%" !=(FloatPrecision::NEG_INFINITY)=> "A. %0.5%", // 负无穷永不匹配
+            // 预算值精度内匹配
+            "$0.5;0.7;0.9$ A." ==(0.0)=> "$0.5;0.7;0.9$ A.",
+            "$0.5;0.9$ A." ==(0.051)=> "$0.55;0.85$ A.", // ±0.05，通配，防止极限`0.050000000000000044`情形
+            "$0.5;0.9$ A." !=(0.051)=> "$0.55;0.84$ A.", // ±0.05，通配，防止极限`0.050000000000000044`情形
+            "$0.5;0.9$ A." !=(0.051)=> "$0.55;0.96$ A.", // ±0.05，通配，防止极限`0.050000000000000044`情形
+            "$0.5;0.7;0.9$ A." ==(0.051)=> "$0.55;0.7058;0.85$ A.", // ±0.050，防止极限`0.050000000000000044`情形
+            "$0.5;0.7;0.9$ A." !=(0.041)=> "$0.55;0.7058;0.85$ A.", // ±0.040，防止极限`0.050000000000000044`情形
+            "$0.5;0.7;0.9$ A." ==(0.041)=> "$0.54;0.7058;0.86$ A.", // ±0.040，防止极限`0.050000000000000044`情形
+            "$0.5;0.7;0.9$ A." !=(0.001)=> "$0.55;0.7058;0.85$ A.", // ±0.001，防止极限`0.050000000000000044`情形
+            // 源自实际应用
+                      "<(&&,<$1 --> lock>,<$2 --> key>) ==> <$1 --> (/,open,$2,_)>>. %1.00;0.45%"
+            ==(0.0)=> "<(&&,<$1 --> key>,<$2 --> lock>) ==> <$2 --> (/,open,$1,_)>>. %1.00;0.45%"
+                       "<animal --> robin>. %1.00;0.45%" // 四位⇒两位（位数不一，但值相同）
+            ==(0.01)=> "$0.9944;0.7848;0.7238$ <animal --> robin>. %1.0000;0.4500%",
+                       "<swimmer --> bird>. %1.00;0.47%" // 四位⇒两位（位数不一，精度不同）
+            ==(0.01)=> "$0.8333;0.7200;0.7369$ <swimmer --> bird>. %1.0000;0.4737%",
         }
     }
 
