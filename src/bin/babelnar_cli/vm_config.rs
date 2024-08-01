@@ -282,6 +282,25 @@ const fn default_epoch() -> Float {
     0.0
 }
 
+/// 检查精度是否有效
+/// * 📌正实数：无穷、NaN、负数均无效
+/// * 🚩只负责检查是否有效：有限 && 非负
+#[inline(always)]
+fn check_epoch(epoch: Float) -> bool {
+    epoch.is_finite() && epoch >= 0.0
+}
+
+/// 检查是否有效，并返回原值/错误
+/// * 🚩[`check_epoch`]+[`Result`]
+fn checked_epoch(epoch: Float) -> Result<Float> {
+    match check_epoch(epoch) {
+        true => Ok(epoch),
+        false => Err(anyhow!(
+            "Invalid epoch '{epoch}': epoch must be finite positive",
+        )),
+    }
+}
+
 /// 尝试将启动时配置[`LaunchConfig`]转换成运行时配置[`RuntimeConfig`]
 /// * 📌默认项：存在默认值，如「启用用户输入」「不自动重启」
 /// * 📌必选项：要求必填值，如「转译器组」「启动命令」
@@ -310,7 +329,7 @@ impl TryFrom<LaunchConfig> for RuntimeConfig {
             // 不开启严格模式
             strict_mode: config.strict_mode.unwrap_or(bool_false()),
             // 完全严格的短浮点
-            short_float_epoch: config.short_float_epoch.unwrap_or(default_epoch()),
+            short_float_epoch: checked_epoch(config.short_float_epoch.unwrap_or(default_epoch()))?,
         })
     }
 }
@@ -690,32 +709,27 @@ pub mod tests {
     use super::*;
     use anyhow::Result;
     use babel_nar::tests::*;
-    use nar_dev_utils::asserts;
-
-    /// 实用测试宏
-    macro_rules! test_parse {
-        { $( $data:expr => $expected:expr )* } => {
-            $(
-                _test(&$data, &$expected).expect("测试失败");
-            )*
-        };
-    }
-
-    fn _test(data: &str, expected: &LaunchConfig) -> Result<()> {
-        // Some JSON input data as a &str. Maybe this comes from the user.
-        let parsed = LaunchConfig::from_json_str(data)?;
-
-        dbg!(&parsed);
-        assert_eq!(parsed, *expected);
-
-        Ok(())
-    }
+    use nar_dev_utils::{asserts, macro_once};
 
     /// 测试/解析
     /// * 🎯JSON/HJSON的解析逻辑
     #[test]
     fn test_parse() {
-        test_parse! {
+        fn test(data: &str, expected: &LaunchConfig) -> Result<()> {
+            // Some JSON input data as a &str. Maybe this comes from the user.
+            let parsed = LaunchConfig::from_json_str(data)?;
+
+            dbg!(&parsed);
+            assert_eq!(parsed, *expected);
+
+            Ok(())
+        }
+        macro_once! {
+            macro test( $( $data:expr => $expected:expr )* ) {
+                $(
+                    test(&$data, &$expected).expect("测试失败");
+                )*
+            }
             // 平凡情况/空
             "{}" => LaunchConfig::new()
             "{}" => LaunchConfig::default()
@@ -790,6 +804,72 @@ pub mod tests {
                 user_input: Some(false),
                 ..Default::default()
             }
+            r#"{
+                "shortFloatEpoch": 0.1,
+            }"# => LaunchConfig {
+                short_float_epoch: Some(0.1),
+                ..Default::default()
+            }
+            r#"{
+                "shortFloatEpoch": 0.1,
+            }"# => LaunchConfig {
+                short_float_epoch: Some(Float::NAN),
+                ..Default::default()
+            }
+        }
+        /*
+        "file": "root/path/to/file"
+        */
+    }
+
+    /// 测试/解析转换失败
+    /// * 🎯JSON/HJSON的解析转换逻辑
+    /// * 🚩对「精度检验」仅用于「转换到运行时参数」的逻辑
+    #[test]
+    fn test_launch_fail() {
+        fn test(data: &str) -> Result<()> {
+            // Some JSON input data as a &str. Maybe this comes from the user.
+            let e = match LaunchConfig::from_json_str(data) {
+                Ok(parsed) => match RuntimeConfig::try_from(parsed) {
+                    Ok(..) => panic!("解析应提早失败"),
+                    Err(err) => err,
+                },
+                Err(err) => err,
+            };
+
+            dbg!(&e);
+
+            Ok(())
+        }
+        macro_once! {
+            macro test( $( $data:expr )* ) {
+                $(
+                    test(&$data).expect("测试失败");
+                )*
+            }
+            // HJSON非法
+            ""
+            "()"
+            "a"
+            "{1, 2, 3}"
+            // 平凡情况
+            "[]"
+            "1"
+            "1.0"
+            // TODO: 可补充「类型不匹配」
+            // 无效精度
+            r#"{
+                "shortFloatEpoch": -0.1,
+            }"#
+            r#"{
+                "shortFloatEpoch": NaN,
+            }"#
+            r#"{
+                "shortFloatEpoch": Infinity,
+            }"#
+            r#"{
+                "shortFloatEpoch": -Infinity,
+            }"#
         }
         /*
         "file": "root/path/to/file"
