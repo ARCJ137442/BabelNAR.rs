@@ -33,7 +33,7 @@ impl CommandVm {
     /// 配置/输入转译器
     /// * 💭何时Rust能给特征起别名。。
     /// * 🚩【2024-04-04 02:06:57】不再需要借走所有权
-    ///   * ✅链式操作现在可以使用[`util::manipulate`]简化
+    ///   * ✅链式操作现在可以使用[`nar_dev_utils::manipulate`]简化
     pub fn input_translator(
         &mut self,
         translator: impl Fn(Cmd) -> Result<String> + Send + Sync + 'static,
@@ -43,7 +43,7 @@ impl CommandVm {
 
     /// 配置/输出转译器
     /// * 🚩【2024-04-04 02:06:57】不再需要借走所有权
-    ///   * ✅链式操作现在可以使用[`util::manipulate`]简化
+    ///   * ✅链式操作现在可以使用[`nar_dev_utils::manipulate`]简化
     pub fn output_translator(
         &mut self,
         translator: impl Fn(String) -> Result<Output> + Send + Sync + 'static,

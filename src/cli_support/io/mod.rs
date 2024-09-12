@@ -2,7 +2,7 @@
 //! * ✨终端美化相关
 //!
 
-util::mods! {
+nar_dev_utils::mods! {
     // 输出打印
     pub output_print;
 

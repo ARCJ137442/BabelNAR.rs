@@ -17,6 +17,7 @@
 
 use crate::runtimes::TranslateError;
 use anyhow::Result;
+use nar_dev_utils::{if_return, pipe};
 use narsese::{
     conversion::string::impl_lexical::{format_instances::FORMAT_ASCII, ParseResult},
     lexical::Narsese,
@@ -26,7 +27,6 @@ use navm::{
     output::{Operation, Output},
 };
 use regex::Regex;
-use util::{if_return, pipe};
 
 /// CXinNARS.js的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「CXinNARS.js Shell输入」

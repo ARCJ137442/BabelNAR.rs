@@ -9,9 +9,9 @@ use crate::{
     runtimes::{CommandGenerator, CommandVmRuntime},
 };
 use anyhow::Result;
+use nar_dev_utils::pipe;
 use navm::vm::VmLauncher;
 use std::path::PathBuf;
-use util::pipe;
 
 /// CXinNARS.js Shell启动的默认指令参数
 /// * 🎯默认预置指令：`[.js文件路径] shell`

@@ -2,7 +2,7 @@
 //! * 🎯共通的exe、Java、Python、Julia 和 Node.js
 
 // 平铺导出元素
-util::pub_mod_and_pub_use! {
+nar_dev_utils::pub_mod_and_pub_use! {
     // exe
     exe
     // Java

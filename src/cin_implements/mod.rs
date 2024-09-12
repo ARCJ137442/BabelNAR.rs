@@ -18,7 +18,7 @@
 //!   * ❌不希望因此再全小写/封装命名空间，如`impls::ona::new`
 //! * ❓目前的问题：在Rust基于「特征」的组合式设计哲学下，如何进行兼顾三者的优秀设计
 
-util::mods! {
+nar_dev_utils::mods! {
     // 共用代码
     pub common;
 

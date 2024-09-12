@@ -4,6 +4,7 @@
 use super::term_equal::*;
 use anyhow::Result;
 use nar_dev_utils::if_return;
+use nar_dev_utils::macro_once;
 use narsese::{
     api::{FloatPrecision, NarseseValue},
     conversion::{
@@ -17,7 +18,6 @@ use narsese::{
     lexical::{Narsese, Sentence as LexicalSentence, Task as LexicalTask, Term},
 };
 use navm::output::Operation;
-use util::macro_once;
 
 /// 判断「输出是否（在Narsese语义层面）符合预期」
 /// * 🎯词法Narsese⇒枚举Narsese，以便从语义上判断

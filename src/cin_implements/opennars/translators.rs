@@ -20,13 +20,13 @@
 use super::dialect::parse as parse_dialect_opennars;
 use crate::runtimes::TranslateError;
 use anyhow::Result;
+use nar_dev_utils::ResultBoost;
 use narsese::lexical::{Narsese, Term};
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
 use regex::Regex;
-use util::ResultBoost;
 
 /// OpenNARS的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「OpenNARS Shell输入」
@@ -124,7 +124,7 @@ pub fn output_translate(content_raw: String) -> Result<Output> {
 ///   * 🚩生产环境下「Narsese解析出错」仅打印错误信息
 #[cfg(not(test))]
 pub fn parse_narsese_opennars(head: &str, tail: &str) -> Result<Option<Narsese>> {
-    use util::ResultBoost;
+    use nar_dev_utils::ResultBoost;
     // ! ↓下方会转换为None
     Ok(try_parse_narsese(tail)
         .ok_or_run(|e| println!("【{head}】在解析Narsese「{tail}」时出现错误：{e}")))

@@ -5,6 +5,7 @@
 
 use super::structs::*;
 use anyhow::{Ok, Result};
+use nar_dev_utils::{first, pipe};
 use narsese::{
     conversion::string::impl_lexical::format_instances::FORMAT_ASCII,
     lexical::{Narsese, Sentence, Task},
@@ -13,7 +14,6 @@ use navm::{cmd::Cmd, output::Operation};
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 use std::{result::Result::Err as StdErr, result::Result::Ok as StdOk, time::Duration};
-use util::{first, pipe};
 
 #[derive(Parser)] // ! ↓ 必须从项目根目录开始
 #[grammar = "src/test_tools/nal_format/nal_grammar.pest"]
@@ -299,7 +299,7 @@ fn parse_duration(duration_raw: &str) -> Result<Duration> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use util::{for_in_ifs, list};
+    use nar_dev_utils::{for_in_ifs, list};
 
     pub const TESTSET: &str = "\
 ' 用于测试CIN的「简单演绎推理」

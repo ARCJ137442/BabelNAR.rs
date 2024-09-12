@@ -14,6 +14,7 @@
 
 use crate::runtimes::TranslateError;
 use anyhow::{anyhow, Result};
+use nar_dev_utils::{pipe, JoinTo};
 use narsese::{
     api::ExtractTerms,
     conversion::string::{
@@ -27,7 +28,6 @@ use navm::{
     output::{Operation, Output},
 };
 use regex::{Captures, Regex};
-use util::{pipe, JoinTo};
 
 /// PyNARS的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「PyNARS输入」
@@ -127,7 +127,7 @@ fn try_get_narsese(preprocessed: &str) -> Result<Narsese> {
 ///   * 🚩生产环境中「解析失败」仅提示（然后返回[`None`]）
 #[cfg(not(test))]
 fn get_narsese(preprocessed: &str) -> Result<Option<Narsese>> {
-    use util::ResultBoost;
+    use nar_dev_utils::ResultBoost;
     // * 🚩解析失败⇒提示⇒返回[`None`]
     Ok(try_get_narsese(preprocessed).ok_or_run(|e| println!("尝试解析Narsese错误：{e}")))
 }

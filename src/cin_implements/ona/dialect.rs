@@ -223,8 +223,8 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
+    use nar_dev_utils::first;
     use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
-    use util::first;
 
     /// 测试/方言解析器 🚧
     #[test]

@@ -3,10 +3,7 @@
 //! * ✨通用运行时
 //! * ✨运行时的各类实现（可选）
 
-// 实用库别名
-pub extern crate nar_dev_utils as util;
-
-util::mods! {
+nar_dev_utils::mods! {
     // 必选模块 //
 
     // 进程IO
@@ -67,19 +64,5 @@ pub mod tests {
             CXIN_JS = "./executables/cxin-nars-shell.js"
             OPENJUNARS = "./executables/OpenJunars/launch.jl"
         }
-    }
-
-    /// 测试用宏/找不到路径即退出
-    /// * 🚩输入一个`&str`，构建`&Path`并在其不存在时退出程序，或返回该`&Path`对象
-    #[macro_export]
-    macro_rules! exists_or_exit {
-        ($path:expr) => {{
-            let path = std::path::Path::new($path);
-            if !path.exists() {
-                println!("所需路径 {path:?} 不存在，已自动退出");
-                std::process::exit(0)
-            }
-            path
-        }};
     }
 }

@@ -139,6 +139,7 @@ pub mod tests {
         runtimes::TranslateError,
         tests::cin_paths::{OPENNARS, PYNARS_MODULE, PYNARS_ROOT},
     };
+    use nar_dev_utils::first;
     use nar_dev_utils::manipulate;
     use narsese::{
         api::{GetBudget, GetPunctuation, GetStamp, GetTerm, GetTruth},
@@ -156,7 +157,6 @@ pub mod tests {
         lexical::Narsese,
     };
     use std::process::Command;
-    use util::first;
 
     // ! 🚩【2024-04-07 12:09:44】现在路径统一迁移到`lib.rs`的`tests`模块下
 

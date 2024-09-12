@@ -71,6 +71,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ws::util::{Timeout, Token};
 
     #[test]
     fn main() {
@@ -135,12 +136,12 @@ mod tests {
             Ok(())
         }
 
-        fn on_timeout(&mut self, event: ws::util::Token) -> ws::Result<()> {
+        fn on_timeout(&mut self, event: Token) -> ws::Result<()> {
             println!("Handler received timeout token: {:?}", event);
             Ok(())
         }
 
-        fn on_new_timeout(&mut self, _: ws::util::Token, _: ws::util::Timeout) -> ws::Result<()> {
+        fn on_new_timeout(&mut self, _: Token, _: Timeout) -> ws::Result<()> {
             // default implementation discards the timeout handle
             Ok(())
         }

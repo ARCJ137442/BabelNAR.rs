@@ -9,12 +9,12 @@ use crate::{
     runtimes::CommandVmRuntime,
 };
 use anyhow::Result;
+use nar_dev_utils::pipe;
 use navm::{
     cmd::Cmd,
     vm::{VmLauncher, VmRuntime},
 };
 use std::path::PathBuf;
-use util::pipe;
 
 /// ONA Shell启动的默认指令参数
 /// * 🎯默认预置指令：`[.exe文件路径] shell`

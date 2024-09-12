@@ -11,7 +11,7 @@ use crate::cli_support::cin_search::{
 use navm::vm::{VmLauncher, VmRuntime};
 use std::path::Path;
 
-util::mods! {
+nar_dev_utils::mods! {
     // OpenNARS
     use pub path_builder_opennars;
     // ONA

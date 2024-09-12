@@ -5,7 +5,7 @@
 //!   * ✅存量支持：兼容大部分OpenNARS、ONA的`.nal`文件
 //!   * ✨增量特性：基于NAVM提供新的测试语法
 
-util::mods! {
+nar_dev_utils::mods! {
     // 结构定义
     pub pub structs;
     // NAL格式支持

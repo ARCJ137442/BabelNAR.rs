@@ -29,6 +29,9 @@ use crate::{
     runtimes::TranslateError,
 };
 use anyhow::Result;
+#[cfg(not(test))]
+use nar_dev_utils::OptionBoost;
+use nar_dev_utils::{if_return, pipe};
 use narsese::lexical::{Narsese, Term};
 use navm::{
     cmd::Cmd,
@@ -36,9 +39,6 @@ use navm::{
 };
 use pest::Parser;
 use regex::{Captures, Regex};
-#[cfg(not(test))]
-use util::OptionBoost;
-use util::{if_return, pipe};
 
 /// ONA已内置的操作列表
 /// * 🎯避免「重复操作注册」
@@ -338,7 +338,7 @@ fn re_capture<'a>(re: &'a Regex, haystack: &'a str) -> Result<Option<Captures<'a
 ///   * 🚩生产环境下「Narsese解析出错」仅打印错误信息
 #[cfg(not(test))]
 pub fn parse_narsese_ona(head: &str, tail: &str) -> Result<Option<Narsese>> {
-    use util::ResultBoost;
+    use nar_dev_utils::ResultBoost;
     // ! ↓下方会转换为None
     Ok(try_parse_narsese(tail).ok_or_run(|e| println!("【{head}】在解析Narsese时出现错误：{e}")))
 }
@@ -419,9 +419,9 @@ fn reform_output_to_narsese(out: &str) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
+    use nar_dev_utils::asserts;
     use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
     use navm::output::type_names::ANSWER;
-    use util::asserts;
 
     /// 测试/正则重整
     #[test]

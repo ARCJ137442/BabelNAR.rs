@@ -338,8 +338,8 @@ pub fn semantical_equal_mut(term1: &mut Term, term2: &mut Term) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nar_dev_utils::macro_once;
     use narsese::conversion::string::impl_lexical::format_instances::FORMAT_ASCII;
-    use util::macro_once;
 
     fn parse_term(s: &str) -> Term {
         FORMAT_ASCII

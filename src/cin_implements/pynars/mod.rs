@@ -7,7 +7,7 @@
 //!   * ❗无法被Rust捕获，可能是Python运行时的问题（输出未链接到管道）
 
 // 转译器
-util::mod_and_pub_use! {
+nar_dev_utils::mod_and_pub_use! {
     // 转译器
     translators
     // 启动器

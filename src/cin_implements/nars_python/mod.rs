@@ -3,7 +3,7 @@
 //!   * 🎯无需自行配置「输入输出转译器」
 
 // 转译器
-util::mod_and_pub_use! {
+nar_dev_utils::mod_and_pub_use! {
     // 方言（Narsese格式）
     dialect
     // 转译器
