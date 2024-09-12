@@ -38,24 +38,21 @@ nar_dev_utils::mods! {
 pub mod tests {
     #![allow(unused_variables)]
 
-    /// 实用宏/简化字符串常量
-    macro_rules! str_const {
-        ($(
-            $(#[$m:meta])*
-            $name:ident = $value:literal $(;)?
-        )*) => {$(
-            $(#[$m])*
-            pub const $name: &str = $value;
-        )*};
-    }
-
     /// 测试用CIN路径
     /// * 🎯后续其它地方统一使用该处路径
     /// * 🎯存储测试用的本地CIN
     ///   * ⚠️该处CIN被自动忽略，不附带于源码中，需要另外的运行时包以启动
     /// * 📌相对路径の根目录：项目根目录（`Cargo.toml`所在目录）
     pub mod cin_paths {
-        str_const! {
+        nar_dev_utils::macro_once! {
+            /// 实用宏/简化字符串常量
+            macro str_const($(
+                $(#[$m:meta])*
+                $name:ident = $value:literal $(;)?
+            )*) {$(
+                $(#[$m])*
+                pub const $name: &str = $value;
+            )*}
             OPENNARS = "./executables/opennars-304-T-modified.jar"
             ONA = "./executables/ONA.exe"
             PYNARS_ROOT = "./executables/PyNARS"
