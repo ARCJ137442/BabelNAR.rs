@@ -66,7 +66,7 @@ pub fn output_translate(content: String) -> Result<Output> {
         },
         "exe" => Output::EXE {
             // TODO: 有待捕获转译
-            operation: Operation::new("UNKNOWN", [].into_iter()),
+            operation: Operation::new("UNKNOWN", []),
             content_raw: content,
         },
         "err" | "error" => Output::ERROR {

@@ -3,8 +3,6 @@
 //! * 🎯提供一种（部分）兼容现有`.nal`格式文件的语法
 //!   * ⚠️对其中所有Narsese部分使用CommonNarsese「通用纳思语」：不兼容方言
 
-use std::{result::Result::Err as StdErr, result::Result::Ok as StdOk, time::Duration};
-
 use super::structs::*;
 use anyhow::{Ok, Result};
 use narsese::{
@@ -14,6 +12,7 @@ use narsese::{
 use navm::{cmd::Cmd, output::Operation};
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
+use std::{result::Result::Err as StdErr, result::Result::Ok as StdOk, time::Duration};
 use util::{first, pipe};
 
 #[derive(Parser)] // ! ↓ 必须从项目根目录开始

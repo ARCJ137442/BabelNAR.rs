@@ -5,13 +5,12 @@
 //!
 //! TODO: 🚧自OpenNARS复制而来，一些地方需要特别适配
 
+use crate::runtimes::TranslateError;
 use anyhow::Result;
 use navm::{
     cmd::Cmd,
     output::{Operation, Output},
 };
-
-use crate::runtimes::TranslateError;
 
 /// OpenJunars的「输入转译」函数
 /// * 🎯用于将统一的「NAVM指令」转译为「OpenJunars Shell输入」
@@ -57,7 +56,7 @@ pub fn output_translate(content: String) -> Result<Output> {
         },
         "exe" => Output::EXE {
             // TODO: 有待捕获转译
-            operation: Operation::new("UNKNOWN", [].into_iter()),
+            operation: Operation::new("UNKNOWN", []),
             content_raw: content,
         },
         "err" | "error" => Output::ERROR {
