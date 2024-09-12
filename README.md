@@ -13,9 +13,8 @@
 - 前身为[**BabelNAR.jl**](https://github.com/ARCJ137442/BabelNAR.jl)
 - ✨为「非公理虚拟机模型」提供程序实现
 - ✨统一各[CIN](#cin-computer-implement-of-nars)的**输入输出**形式，聚合使用各大NARS实现
-- ✨提供一个方便使用的CLI工具，以便从配置中快速启动、测试各类NARS实现
-  - 🎯一站式NARS**启动器**
-  - 🎯NARS**交叉测试**工具
+- ✨可由此进一步建立各类基于「NAVM模型」的工具
+  - 📄命令行接口 [**BabelNAR-CLI**](https://github.com/ARCJ137442/BabelNAR-CLI.rs)
 
 <!-- ## 安装 -->
 
@@ -23,13 +22,15 @@
 
 ## 使用
 
+🏗️TODO（接受贡献）
+
 ### CLI
 
-- 使用 JSON/HJSON 配置文件 (`.json`/`.hjson`)
-  - 格式可参考项目测试代码
-- Rust调用侧：可参考项目测试代码
+参见[BabelNAR-CLI](https://github.com/ARCJ137442/BabelNAR-CLI.rs)
 
-🏗️TODO（接受贡献）
+### 构建上游Rust项目
+
+亦可参见[BabelNAR-CLI](https://github.com/ARCJ137442/BabelNAR-CLI.rs)（源码）
 
 ## 概念
 
