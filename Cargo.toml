@@ -87,41 +87,20 @@ optional = true
 version = "2.7.12"
 optional = true
 
-# 命令行支持/彩色终端
-[dependencies.colored]
-version = "2.1.0"
-optional = true
-
-# 命令行支持/(H)JSON配置解析
-[dependencies.serde]
-version = "1.0.210"
-optional = true
-features = ["derive"]
+# 命令行支持/JSON「原生」转译器解析
+# [dependencies.serde]
+# version = "1.0.210"
+# features = ["derive"]
 
 [dependencies.serde_json]
 version = "1.0.128"
-optional = true
-
-[dependencies.deser-hjson]
-version = "2.2.4"
-optional = true
-
-# 命令行支持/Websocket服务
-[dependencies.ws]
-version = "0.9.2"
-optional = true
-
-# 命令行支持/命令行参数解析
-[dependencies.clap]
-version = "4.5.17"
-features = ["derive"]
-optional = true
 
 ### 定义库的特性 ###
 [features]
 
 ## 默认启用的特性 ##
 default = [ "bundled" ] # * 默认启用所有（可选禁用）
+
 ## 大杂烩 ##
 bundled = [
     "cin_implements", # 各大CIN的NAVM实现
@@ -130,7 +109,14 @@ bundled = [
 
 ## 各个独立的特性 ##
 
+# 测试工具集 #
+test_tools = [
+    # 统一`.nal`格式
+    "pest", "pest_derive",
+]
+
 # 具体接口实现（虚拟机启动器） #
+# * 📌若支持「NAVM指令-NAVM输出JSON」语法，则直接使用「原生转译器」而无需在此定义
 # ✅OpenNARS
 # ✅ONA
 # ✅PyNARS
@@ -164,17 +150,3 @@ nars_python = [
 ]
 # ✅OpenJunars接口（不稳定）
 openjunars = []
-
-# 命令行支持 #
-cli_support = [
-    "colored", # 命令行io 彩色打印
-    "serde", "serde_json", "deser-hjson", # 配置文件解析
-    "ws", # 命令行io Websocket服务
-    "clap" # 命令行参数解析
-]
-
-# 测试工具集 #
-test_tools = [
-    # 统一`.nal`格式
-    "pest", "pest_derive",
-]
