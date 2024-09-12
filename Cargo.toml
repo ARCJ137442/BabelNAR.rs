@@ -125,7 +125,6 @@ default = [ "bundled" ] # * 默认启用所有（可选禁用）
 ## 大杂烩 ##
 bundled = [
     "cin_implements", # 各大CIN的NAVM实现
-    "cli_support", # 命令行支持
     "test_tools", # 测试工具集
 ]
 

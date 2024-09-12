@@ -25,7 +25,6 @@
 use super::dialect::parse as parse_dialect_ona;
 use crate::{
     cin_implements::ona::{fold_pest_compound, DialectParser, Rule},
-    cli_support::io::output_print::OutputType,
     runtimes::TranslateError,
 };
 use anyhow::Result;
@@ -269,14 +268,18 @@ pub fn parse_anticipate_ona(content_raw: &str) -> Result<Option<Narsese>> {
             // 解析
             let parse_result =
                 parse_narsese_ona(ANTICIPATE, narsese_content.trim()).inspect_err(|e| {
-                    OutputType::Error.eprint_line(&format!("ONA「预期」解析失败：{e}"));
+                    eprintln!("ONA「预期」解析失败：{e}");
+                    // ! 📌【2024-09-12 17:50:10】此处无需再依赖`cli_support::OutputType`：用户侧不常见，无需专门格式化输出
+                    // * 🎯拆分「CLI支持」到`BabelNAR-CLI.rs`
                 });
             // 返回
             parse_result
         }
         // 截取失败的情形
         None => {
-            OutputType::Error.eprint_line(&format!("ONA「预期」正则捕获失败：{content_raw:?}"));
+            eprintln!("ONA「预期」正则捕获失败：{content_raw:?}");
+            // ! 📌【2024-09-12 17:50:10】此处无需再依赖`cli_support::OutputType`：用户侧不常见，无需专门格式化输出
+            // * 🎯拆分「CLI支持」到`BabelNAR-CLI.rs`
             Ok(None)
         }
     }

@@ -1,9 +1,8 @@
 //! 与NAVM虚拟机的交互逻辑
 
 use super::{NALInput, OutputExpectation, OutputExpectationError};
-use crate::cli_support::{error_handling_boost::error_anyhow, io::output_print::OutputType};
 use anyhow::Result;
-use nar_dev_utils::{if_return, ResultBoost};
+use nar_dev_utils::if_return;
 use narsese::api::FloatPrecision;
 use navm::{cmd::Cmd, output::Output, vm::VmRuntime};
 use std::{ops::ControlFlow, path::Path, time::Duration};
@@ -209,7 +208,11 @@ fn nal_expect_cycle(
             )?;
         // 匹配到一个⇒提前返回Ok
         if let Some(true) = result {
-            OutputType::Info.print_line(&format!("expect-cycle({cycles}): {expectation}"));
+            // * 🚩【2024-09-12 17:54:50】目前逻辑从「直接打印到终端」改为「向输出缓存打印输出（以便外部识别）」
+            // TODO: 有待验证正确性
+            let message = format!("expect-cycle({cycles}): {expectation}");
+            let output = Output::INFO { message };
+            output_cache.put(output)?;
             return Ok(());
         }
     }
@@ -260,5 +263,5 @@ fn nal_terminate(
     // 终止虚拟机
     vm.terminate()?;
     // 返回
-    result.transform_err(error_anyhow)
+    result.map_err(|e| anyhow::anyhow!("{e}"))
 }

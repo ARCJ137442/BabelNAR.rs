@@ -20,8 +20,8 @@ nar_dev_utils::mods! {
     // 各CIN的启动器、运行时实现
     "cin_implements" => pub cin_implements;
 
-    // 命令行支持
-    "cli_support" => pub cli_support;
+    // ! 📌【2024-09-12 17:52:40】决议：将`cli_support`迁移到 BabelNAR-CLI.rs 中
+    // * 🎯代码功能分离——CIN配置搜索、命令行输出、错误处理等
 
     // 测试工具集
     "test_tools" => pub test_tools;
