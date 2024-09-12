@@ -2,6 +2,7 @@
 //! * 🚩【2024-04-02 22:49:12】从[`crate::runtimes::command_vm::runtime::tests`]中迁移而来
 
 use super::term_equal::*;
+use crate::test_tools::OutputExpectation;
 use anyhow::Result;
 use nar_dev_utils::if_return;
 use nar_dev_utils::macro_once;
@@ -17,7 +18,42 @@ use narsese::{
     },
     lexical::{Narsese, Sentence as LexicalSentence, Task as LexicalTask, Term},
 };
-use navm::output::Operation;
+use navm::output::{Operation, Output};
+
+/// 实现/预期匹配功能
+impl OutputExpectation {
+    /// 判断一个「NAVM输出」是否与自身相符合
+    pub fn matches(&self, output: &Output, precision_epoch: FloatPrecision) -> bool {
+        // 输出类型
+        if let Some(expected) = &self.output_type {
+            if_return! { expected != output.type_name() => false }
+        }
+
+        // Narsese
+        match (&self.narsese, output.get_narsese()) {
+            // 预期有，输出无⇒直接pass
+            (Some(..), None) => return false,
+            // 预期输出都有⇒判断Narsese是否相同
+            (Some(expected), Some(out)) => {
+                if_return! {
+                    !is_expected_narsese_lexical(expected, out, precision_epoch)
+                    => false
+                }
+            }
+            _ => (),
+        }
+
+        // 操作 | 最后返回
+        match (&self.operation, output.get_operation()) {
+            // 预期无⇒通配
+            (None, ..) => true,
+            // 预期有，输出无⇒直接pass
+            (Some(_), None) => false,
+            // 预期有，输出有⇒判断操作是否相同
+            (Some(expected), Some(out)) => is_expected_operation(expected, out),
+        }
+    }
+}
 
 /// 判断「输出是否（在Narsese语义层面）符合预期」
 /// * 🎯词法Narsese⇒枚举Narsese，以便从语义上判断
