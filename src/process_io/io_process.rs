@@ -11,6 +11,8 @@
 //!   * 🚩【2024-03-25 13:29:14】目前解决方案：调用系统`taskkill`指令，利用进程id强制终止
 //!   * ⚠️【2024-03-25 13:32:50】
 
+use anyhow::Result;
+use nar_dev_utils::{debug_println, ResultBoost};
 use std::{
     error::Error,
     ffi::OsStr,
@@ -23,9 +25,6 @@ use std::{
     },
     thread::{self, JoinHandle},
 };
-// use nar_dev_utils::*;
-use anyhow::Result;
-use nar_dev_utils::ResultBoost;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IoProcessError(String);
@@ -110,7 +109,7 @@ impl IoProcess {
                 .stdout(Stdio::piped())
                 // 产生进程
                 .spawn()?;
-        println!("Started process: {}", child.id());
+        debug_println!("Started process: {}", child.id());
 
         // 获取输出侦听器
         let out_listener = self.out_listener;
@@ -257,11 +256,11 @@ impl IoProcessManager {
                         // * 🚩进程已关闭⇒退出
                         // TODO: 🏗️外包「错误处理」逻辑
                         ErrorKind::BrokenPipe => {
-                            println!("子进程已关闭");
+                            eprintln!("[IoProcessManager] 子进程已关闭");
                             break;
                         }
                         // 其它
-                        _ => println!("子进程写入错误：{e}"),
+                        _ => eprintln!("[IoProcessManager] 子进程写入错误：{e}"),
                     }
                 }
             }

@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.26.0"
+version = "0.26.1"
 edition = "2021"
 description = """
 Implementation and application supports of the NAVM model
@@ -29,7 +29,7 @@ clearscreen = "3.0.0"
 
 [dependencies.nar_dev_utils]
 # 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`
-version = "0" # * ✅现已发布至`crates.io`
+version = "0.41" # * ✅现已发布至`crates.io`
 # *🚩【2024-03-21 09:26:38】启用所有
 # path = "../NAR-dev-util"
 # git = "https://github.com/ARCJ137442/NAR-dev-util"
