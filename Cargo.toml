@@ -24,13 +24,13 @@ repository = "https://github.com/ARCJ137442/BabelNAR.rs"
 
 [dependencies]
 # 用于错误处理
-thiserror = "1.0.58"
-anyhow = "1.0.81"
+thiserror = "1.0.63"
+anyhow = "1.0.88"
 clearscreen = "3.0.0"
 
 [dependencies.nar_dev_utils]
 # 【2024-03-13 21:17:55】实用库现在独立为`nar_dev_utils`
-version = "0.41" # * ✅现已发布至`crates.io`
+version = "0.42" # * ✅现已发布至`crates.io`
 # *🚩【2024-03-21 09:26:38】启用所有
 # path = "../NAR-dev-util"
 # git = "https://github.com/ARCJ137442/NAR-dev-util"
@@ -80,7 +80,7 @@ optional = true
 # * 🎯用于对接一些NARS方言的解析
 #   * 📄OpenNARS（操作语法）、ONA（中缀语法）
 [dependencies.pest]
-version = "2.7.8"
+version = "2.7.12"
 optional = true
 
 # Rust版本的PEG解析器（派生宏）
