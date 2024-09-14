@@ -30,8 +30,10 @@ jobs:
         with:
           rust-version: stable
 
-      - name: cargo test
-        run: cargo test --all-features
+      # ! ❌【2024-09-14 15:42:55】暂时不用：该repo部分测试需要外部CIN运行时支持（如Python），尚未兼容各操作系统
+      # TODO: 🚧【2024-09-14 15:44:08】用类似「平台特定程序包」的方式 兼容远程与其它操作系统（预估难度：长期、复杂）
+      # - name: cargo test
+      #   run: cargo test --all-features
 
       - name: rustfmt
         run: cargo fmt --all -- --check
