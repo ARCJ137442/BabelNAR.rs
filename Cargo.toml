@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.26.1"
+version = "0.26.2"
 edition = "2021"
 description = """
 Implementation and application supports of the NAVM model
@@ -18,6 +18,7 @@ categories = [
 repository = "https://github.com/ARCJ137442/BabelNAR.rs"
 
 # Cargo文档参考：<https://rustwiki.org/zh-CN/cargo/reference/manifest.html>
+
 
 ## 必要的依赖 ##
 
@@ -95,6 +96,7 @@ optional = true
 [dependencies.serde_json]
 version = "1.0.128"
 
+
 ### 定义库的特性 ###
 [features]
 
@@ -150,3 +152,18 @@ nars_python = [
 ]
 # ✅OpenJunars接口（不稳定）
 openjunars = []
+
+
+## 配置编译检查 ##
+
+# 有关Clippy的参考：
+# * 🔗<https://doc.rust-lang.org/clippy/configuration.html>
+[lints.clippy]
+
+# 📌【2024-08-25 00:31:01】允许文档注释中出现以下情况
+# ```markdown
+# * 📝这是一个笔记
+# ? 💭这是一个问题
+#   * 📍这是问题下的一个小点
+# ```
+doc_lazy_continuation = "allow"

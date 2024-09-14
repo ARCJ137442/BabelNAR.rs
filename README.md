@@ -1,12 +1,41 @@
 # BabelNAR.rs
 
-简体中文 | [English](./README.en-us.md)
+|**简体中文** | [English](README.en.md)|
+|:-:|:-:|
 
     🏗️项目的**英文文档**尚在筹建，有意者欢迎提交PR
 
-[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
+<!-- 徽章安排参考：https://daily.dev/blog/readme-badges-github-best-practices#organizing-badges-in-your-readme -->
 
-该项目使用[语义化版本 2.0.0](https://semver.org/)进行版本号管理。
+![License](https://img.shields.io/crates/l/babel_nar?style=for-the-badge&color=ff7043)
+![Code Size](https://img.shields.io/github/languages/code-size/ARCJ137442/BabelNAR.rs?style=for-the-badge&color=ff7043)
+![Lines of Code](https://www.aschey.tech/tokei/github.com/ARCJ137442/BabelNAR.rs?style=for-the-badge&color=ff7043)
+[![Language](https://img.shields.io/badge/language-Rust-orange?style=for-the-badge&color=ff7043)](https://www.rust-lang.org)
+
+<!-- 面向用户 -->
+
+Cargo状态：
+
+[![crates.io](https://img.shields.io/crates/v/babel_nar?style=for-the-badge)](https://crates.io/crates/babel_nar)
+[![docs.rs](https://img.shields.io/docsrs/babel_nar?style=for-the-badge)](https://docs.rs/babel_nar)
+![Crate Size](https://img.shields.io/crates/size/babel_nar?style=for-the-badge)
+
+![Recent Downloads](https://img.shields.io/crates/dr/babel_nar?style=for-the-badge)
+![Downloads](https://img.shields.io/crates/d/babel_nar?style=for-the-badge)
+![Crates.io Dependents](https://img.shields.io/crates/dependents/babel_nar?style=for-the-badge)
+
+<!-- 面向开发者 -->
+
+开发状态：
+
+[![CI status](https://img.shields.io/github/actions/workflow/status/ARCJ137442/BabelNAR.rs/ci.yml?style=for-the-badge)](https://github.com/ARCJ137442/BabelNAR.rs/actions/workflows/ci.yml)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-2.0.0-%23FE5196?style=for-the-badge)](https://conventionalcommits.org)
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/ARCJ137442/BabelNAR.rs/latest?style=for-the-badge)
+
+![Created At](https://img.shields.io/github/created-at/ARCJ137442/BabelNAR.rs?style=for-the-badge)
+![Last Commit](https://img.shields.io/github/last-commit/ARCJ137442/BabelNAR.rs?style=for-the-badge)
+
+## 简介
 
 [**NAVM.rs**](https://github.com/ARCJ137442/NAVM.rs)对[CIN](#cin-computer-implement-of-nars)的**启动器**、**运行时**及应用程序实现
 
