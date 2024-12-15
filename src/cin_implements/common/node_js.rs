@@ -9,7 +9,7 @@ use std::{path::PathBuf, process::Command};
 /// 启动Node.js运行时的命令
 const COMMAND_NODE: &str = "node";
 
-/// ! Node.js启动脚本无需附加参数
+// ! Node.js启动脚本无需附加参数
 
 /// CXinNARS运行时启动器
 /// * 🎯配置CXinNARS专有的东西
