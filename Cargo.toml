@@ -1,6 +1,6 @@
 [package]
 name = "babel_nar"
-version = "0.26.3"
+version = "0.27.0"
 edition = "2021"
 description = """
 Implementation and application supports of the NAVM model

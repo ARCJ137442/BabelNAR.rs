@@ -68,6 +68,8 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         Cmd::CYC(n) => n.to_string(),
         // VOL指令：调整音量
         Cmd::VOL(n) => format!("*volume={n}"),
+        // RES指令：重置推理器
+        Cmd::RES { .. } => "*reset".into(),
         // REG指令：注册操作
         Cmd::REG { name } => match OPERATOR_NAME_LIST.contains(&name.as_str()) {
             true => String::new(),
@@ -77,6 +79,15 @@ pub fn input_translate(cmd: Cmd) -> Result<String> {
         Cmd::REM { .. } => String::new(),
         // 退出 ⇒ 无效输入 | // ! 🚩故意使用ONA中会「报错退出」的输入，强制ONA shell退出（其后不会再接收输入）
         Cmd::EXI { .. } => "*quit".into(),
+        Cmd::INF { source } => match source.as_str() {
+            // 所有概念
+            "concepts" => "*concepts".into(),
+            // 统计信息
+            "stats" => "*stats".into(),
+            // TODO: 📌【2024-12-15 20:10:20】ONA实际上还有其它的「查询命令」可对接，后续可再增补
+            // * 🚩【2024-12-15 20:12:11】此处暂且放行，以便灵活输入（避免封死）
+            _ => source,
+        },
         // 其它类型
         // * 📌【2024-03-24 22:57:18】基本足够支持
         _ => return Err(TranslateError::UnsupportedInput(cmd).into()),
